@@ -1234,6 +1234,122 @@ function WorkflowCanvas({
                         )}
                       </div>
                     )}
+
+                    {selectedCommTemplate && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#92400e', marginTop: 8 }}>
+                          Send to
+                        </div>
+                        {selectedCommTemplate.channel === 'email' && (
+                          <>
+                            <div style={{ fontSize: 10, color: '#92400e', marginBottom: 4 }}>
+                              Use a literal address or a placeholder from the workflow JSON (e.g. {`{{payload.recipientEmail}}`}).
+                            </div>
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>To</label>
+                            <input
+                              type="text"
+                              placeholder="email@example.com or {{payload.recipientEmail}}"
+                              value={selectedNode.data?.actionConfig?.emailTo || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              emailTo: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                marginBottom: 4,
+                                width: '100%',
+                              }}
+                            />
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>CC (optional)</label>
+                            <input
+                              type="text"
+                              placeholder="cc@example.com or {{payload.ccEmail}}"
+                              value={selectedNode.data?.actionConfig?.emailCc || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              emailCc: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                width: '100%',
+                              }}
+                            />
+                          </>
+                        )}
+                        {selectedCommTemplate.channel === 'slack' && (
+                          <>
+                            <div style={{ fontSize: 10, color: '#92400e', marginBottom: 4 }}>
+                              Literal channel/webhook or placeholder (e.g. {`{{payload.slackChannel}}`}).
+                            </div>
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>Slack channel or webhook URL</label>
+                            <input
+                              type="text"
+                              placeholder="#ops-alerts or {{payload.slackChannel}}"
+                              value={selectedNode.data?.actionConfig?.slackChannel || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              slackChannel: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                width: '100%',
+                              }}
+                            />
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 

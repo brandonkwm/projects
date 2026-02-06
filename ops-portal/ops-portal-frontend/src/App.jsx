@@ -6,6 +6,10 @@ import CaseTemplateList from './components/CaseTemplateList';
 import CaseTemplateEditor from './components/CaseTemplateEditor';
 import CommunicationTemplateList from './components/CommunicationTemplateList';
 import CommunicationTemplateEditor from './components/CommunicationTemplateEditor';
+import CaseWorkList from './components/CaseWorkList';
+import CaseWorkView from './components/CaseWorkView';
+import CaseTraceView from './components/CaseTraceView';
+import CreateTestCaseForm from './components/CreateTestCaseForm';
 import {
   getAllWorkflows,
   getWorkflowById,
@@ -24,15 +28,19 @@ import {
   saveCommunicationTemplate,
   deleteCommunicationTemplate,
 } from './lib/communicationTemplateStorage';
+import { getAllCaseInstances } from './lib/caseInstanceStorage';
 import './App.css';
 
 function App() {
-  const [section, setSection] = useState('workflows'); // 'workflows' | 'cases' | 'comms'
-  const [view, setView] = useState('list'); // workflows: 'list' | 'builder'; cases/comms: 'list' | 'editor'
+  const [section, setSection] = useState('workflows'); // 'workflows' | 'cases' | 'comms' | 'casework'
+  const [view, setView] = useState('list'); // workflows: list|builder; cases/comms: list|editor; casework: list|open|create
   const [selectedWorkflowId, setSelectedWorkflowId] = useState(null); // null = new workflow
   const [workflows, setWorkflows] = useState(() => getAllWorkflows());
   const [caseTemplates, setCaseTemplates] = useState(() => getAllCaseTemplates());
   const [communicationTemplates, setCommunicationTemplates] = useState(() => getAllCommunicationTemplates());
+  const [caseInstances, setCaseInstances] = useState(() => getAllCaseInstances());
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [traceCaseId, setTraceCaseId] = useState(null);
 
   const refreshWorkflows = useCallback(() => {
     setWorkflows(getAllWorkflows());
@@ -44,6 +52,10 @@ function App() {
 
   const refreshCommunicationTemplates = useCallback(() => {
     setCommunicationTemplates(getAllCommunicationTemplates());
+  }, []);
+
+  const refreshCaseInstances = useCallback(() => {
+    setCaseInstances(getAllCaseInstances());
   }, []);
 
   const handleNew = useCallback(() => {
@@ -203,6 +215,57 @@ function App() {
       );
     }
 
+    if (section === 'casework') {
+      if (traceCaseId) {
+        return (
+          <CaseTraceView
+            caseId={traceCaseId}
+            workflows={workflows}
+            onBack={() => setTraceCaseId(null)}
+          />
+        );
+      }
+      if (view === 'create') {
+        return (
+          <CreateTestCaseForm
+            caseTemplates={caseTemplates}
+            onCreateAndOpen={(id) => {
+              setSelectedCaseId(id);
+              setView('open');
+              refreshCaseInstances();
+            }}
+            onBack={() => setView('list')}
+          />
+        );
+      }
+      if (view === 'open' && selectedCaseId) {
+        return (
+          <CaseWorkView
+            caseId={selectedCaseId}
+            caseTemplates={caseTemplates}
+            onBack={() => {
+              setView('list');
+              setSelectedCaseId(null);
+              refreshCaseInstances();
+            }}
+            onComplete={refreshCaseInstances}
+          />
+        );
+      }
+      return (
+        <CaseWorkList
+          cases={caseInstances}
+          caseTemplates={caseTemplates}
+          onOpen={(id) => {
+            setSelectedCaseId(id);
+            setView('open');
+          }}
+          onTraceCaseId={(id) => setTraceCaseId(id || null)}
+          onCreateTestCase={() => setView('create')}
+        />
+      );
+    }
+
     return null;
   };
 
@@ -271,6 +334,25 @@ function App() {
             }}
           >
             Communication templates
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSection('casework');
+              setView('list');
+              setSelectedCaseId(null);
+              refreshCaseInstances();
+            }}
+            style={{
+              padding: '6px 12px',
+              fontSize: 13,
+              borderRadius: 999,
+              border: '1px solid ' + (section === 'casework' ? '#0d9488' : '#d1d5db'),
+              background: section === 'casework' ? '#ccfbf1' : '#ffffff',
+              cursor: 'pointer',
+            }}
+          >
+            Case work
           </button>
         </nav>
       </header>
