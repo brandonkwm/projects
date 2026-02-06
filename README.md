@@ -17,3 +17,5 @@ This is an MVP of what could be an internal operations platform where there is a
 5. to activate the backend server - do the same but in ops-portal/ops-portal-backend
 6. npm install
 7. npm run dev
+
+Note: vibe coded using cursor AI
