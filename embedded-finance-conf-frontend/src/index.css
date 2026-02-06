@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #050816;
+  --color-bg-soft: #0b1120;
+  --color-card: #020617;
+  --color-accent: #38bdf8;
+  --color-accent-soft: #0ea5e9;
+  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.85);
+}
+
+body {
+  @apply antialiased text-slate-100;
+  background: linear-gradient(to bottom right, #020617, #0f172a, #020617);
+  min-height: 100vh;
+}
