@@ -1,41 +1,108 @@
 import React, { useEffect, useState } from 'react';
-import { dashboard as dashboardApi } from '../api';
+import { dashboard as dashboardApi, reconciliationTypes as typesApi, compare as compareApi } from '../api';
 
 export default function Dashboard({ onOpenRun }) {
   const [metrics, setMetrics] = useState(null);
   const [recentRuns, setRecentRuns] = useState([]);
+  const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sideAFile, setSideAFile] = useState(null);
+  const [sideBFile, setSideBFile] = useState(null);
+  const [compareTypeId, setCompareTypeId] = useState('cash-vs-bank');
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [m, r, t] = await Promise.all([
+        dashboardApi.metrics(),
+        dashboardApi.runs(10),
+        typesApi.list().catch(() => []),
+      ]);
+      setMetrics(m);
+      setRecentRuns(r);
+      setTypes(t);
+      if (t.length && !t.some((x) => x.id === compareTypeId)) setCompareTypeId(t[0].id);
+    } catch (e) {
+      const msg = e.message || String(e);
+      const isBackendDown = /fetch|network|connection refused|ECONNREFUSED|failed to fetch/i.test(msg) || e.name === 'TypeError';
+      setError(isBackendDown
+        ? 'Backend not reachable. Start it in another terminal: cd reconciliation-platform/backend && npm run dev'
+        : msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [m, r] = await Promise.all([dashboardApi.metrics(), dashboardApi.runs(10)]);
-        if (!cancelled) {
-          setMetrics(m);
-          setRecentRuns(r);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
     load();
-    return () => { cancelled = true; };
   }, []);
 
+  const handleCompare = async () => {
+    if (!sideAFile || !sideBFile) {
+      setCompareError('Please select both Side A and Side B files.');
+      return;
+    }
+    setCompareLoading(true);
+    setCompareError(null);
+    try {
+      const formData = new FormData();
+      formData.append('sideA', sideAFile);
+      formData.append('sideB', sideBFile);
+      formData.append('reconciliationTypeId', compareTypeId);
+      const result = await compareApi.run(formData);
+      await load();
+      if (result?.run?.id && onOpenRun) onOpenRun(result.run.id);
+    } catch (e) {
+      setCompareError(e.message);
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
   if (loading) return <div className="text-slate-500">Loading dashboard…</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (error) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <p className="font-medium">Error: {error}</p>
+        <p className="mt-2 text-sm">Make sure the backend is running on port 3002 (e.g. <code className="bg-amber-100 px-1 rounded">cd backend && npm run dev</code>).</p>
+      </div>
+    );
+  }
   if (!metrics) return null;
 
   const { runs: runMetrics, explanations: expMetrics } = metrics;
 
   return (
     <div className="space-y-8">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="font-semibold text-slate-800 mb-3">Upload & compare</h3>
+        <p className="text-sm text-slate-600 mb-3">Upload two files (CSV or JSON) with a common key column. Sample files: <code className="text-xs bg-slate-100 px-1">sample-data/side-a.csv</code>, <code className="text-xs bg-slate-100 px-1">sample-data/side-b.json</code>.</p>
+        <div className="flex flex-wrap gap-4 items-end">
+          <label className="block">
+            <span className="text-sm text-slate-600">Side A</span>
+            <input type="file" accept=".csv,.json,text/csv,application/json" onChange={(e) => setSideAFile(e.target.files?.[0] || null)} className="mt-1 block text-sm" />
+          </label>
+          <label className="block">
+            <span className="text-sm text-slate-600">Side B</span>
+            <input type="file" accept=".csv,.json,text/csv,application/json" onChange={(e) => setSideBFile(e.target.files?.[0] || null)} className="mt-1 block text-sm" />
+          </label>
+          <label className="block">
+            <span className="text-sm text-slate-600">Reconciliation type</span>
+            <select value={compareTypeId} onChange={(e) => setCompareTypeId(e.target.value)} className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm">
+              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={handleCompare} disabled={compareLoading} className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 text-sm">
+            {compareLoading ? 'Comparing…' : 'Compare'}
+          </button>
+        </div>
+        {compareError && <p className="mt-2 text-sm text-red-600">{compareError}</p>}
+      </div>
+
       <h2 className="text-xl font-semibold text-slate-800">Agentic AI metrics</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,0 +1,5 @@
+[
+  { "transaction_id": "TXN-001", "amount": 100.00, "date": "2024-01-10", "counterparty": "Acme" },
+  { "transaction_id": "TXN-003", "amount": 100.00, "date": "2024-01-12", "counterparty": "Gamma" },
+  { "transaction_id": "TXN-005", "amount": 75.25, "date": "2024-01-14", "counterparty": "Other" }
+]

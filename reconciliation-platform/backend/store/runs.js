@@ -6,6 +6,7 @@
 
 const runs = [];
 const breaksByRunId = new Map();
+const datasetsByRunId = new Map();
 
 export function listRuns() {
   return [...runs].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
@@ -56,4 +57,12 @@ export function addBreak(runId, breakRecord) {
 
 export function setBreaks(runId, breakList) {
   breaksByRunId.set(runId, breakList);
+}
+
+export function setDatasets(runId, sideA, sideB) {
+  datasetsByRunId.set(runId, { sideA: sideA || [], sideB: sideB || [] });
+}
+
+export function getDatasets(runId) {
+  return datasetsByRunId.get(runId) || null;
 }

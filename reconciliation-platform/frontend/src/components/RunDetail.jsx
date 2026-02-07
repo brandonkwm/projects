@@ -89,7 +89,7 @@ export default function RunDetail({ runId, onBack }) {
       {/* View underlying datasets */}
       {runDatasets && (runDatasets.sideA?.length > 0 || runDatasets.sideB?.length > 0) && (
         <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <h3 className="font-semibold text-slate-800 p-4 border-b border-slate-200">Underlying datasets (sample)</h3>
+          <h3 className="font-semibold text-slate-800 p-4 border-b border-slate-200">Underlying datasets</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-2">Side A</p>

@@ -46,3 +46,21 @@ export const dashboard = {
   metrics: () => request('/dashboard/metrics'),
   runs: (limit = 10) => request(`/dashboard/runs?limit=${limit}`),
 };
+
+export const compare = {
+  /** Upload two files (CSV or JSON) and run comparison. Returns { run, summary }. */
+  run: (formData) => {
+    const headers = {};
+    return fetch(`${API_BASE}/compare`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+      }
+      return res.json();
+    });
+  },
+};

@@ -18,30 +18,15 @@ router.get("/:id", (req, res) => {
   res.json(run);
 });
 
-/** Run with full details: run + breaks + explanations + mock datasets (for run detail view). */
+/** Run with full details: run + breaks + explanations + datasets (uploaded data if from compare). */
 router.get("/:id/full", (req, res) => {
   const run = runStore.getRun(req.params.id);
   if (!run) return res.status(404).json({ error: "Not found" });
   const breaks = runStore.listBreaks(req.params.id);
   const explanations = explanationStore.list({ runId: req.params.id });
-  const datasets = getMockDatasets(req.params.id);
+  const datasets = runStore.getDatasets(req.params.id);
   res.json({ run, breaks, explanations, datasets });
 });
-
-function getMockDatasets(runId) {
-  return {
-    sideA: [
-      { transaction_id: "TXN-001", amount: 100.01, date: "2024-01-10", counterparty: "Acme" },
-      { transaction_id: "TXN-002", amount: 50, date: "2024-01-11", counterparty: "Beta" },
-      { transaction_id: "TXN-003", amount: 99.99, date: "2024-01-12", counterparty: "Gamma" },
-    ],
-    sideB: [
-      { transaction_id: "TXN-001", amount: 100.0, date: "2024-01-10", counterparty: "Acme" },
-      { transaction_id: "TXN-003", amount: 100, date: "2024-01-12", counterparty: "Gamma" },
-      { transaction_id: "TXN-099", amount: 200, date: "2024-01-15", counterparty: "Other" },
-    ],
-  };
-}
 
 router.post("/", (req, res) => {
   try {
