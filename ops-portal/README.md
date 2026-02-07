@@ -10,12 +10,33 @@
 This is an MVP of what could be an internal operations platform where there is a backend server that will allow different microservices to call HTTP API endpoint to pass in JSON payload and the frontend is where the magic happens - users are able to edit the workflows / create new workflows
 
 ## How to use ##
-1. download the repo
-2. go to ops-portal/ops-portal-frontend
-3. npm install
-4. npm run dev
-5. to activate the backend server - do the same but in ops-portal/ops-portal-backend
-6. npm install
-7. npm run dev
+
+### Launch the application
+
+**Prerequisites:** Node.js (v18+ recommended) and npm.
+
+1. **Clone or download the repo** and open a terminal in the project root (`ops-portal`).
+
+2. **Start the backend** (optional; frontend works with localStorage if the backend is not running):
+   ```bash
+   cd ops-portal-backend
+   npm install
+   npm run dev
+   ```
+   Backend runs at **http://localhost:3001** by default. Set `PORT` to override.
+
+3. **Start the frontend** (in a second terminal):
+   ```bash
+   cd ops-portal-frontend
+   npm install
+   npm run dev
+   ```
+   Frontend runs at **http://localhost:5173** (Vite default). Open this URL in your browser.
+
+4. Use the app: configure **Workflows**, **Case templates**, and **Communication templates**, then work on cases under **Case work**. Data is stored in the browser (localStorage) unless you wire the frontend to the backend API.
+
+**One-liner from repo root (two terminals):**
+- Terminal 1: `cd ops-portal-backend && npm install && npm run dev`
+- Terminal 2: `cd ops-portal-frontend && npm install && npm run dev`
 
 Note: vibe coded using cursor AI
