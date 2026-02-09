@@ -137,9 +137,17 @@ function TaskNode({ data }) {
 }
 
 function ConditionNode({ data }) {
-  // Diamond rendered using CSS transform
+  const isAiMode = data?.conditionMode === 'ai';
+  const allowedOutputs = (data?.aiConfig?.allowedOutputs || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const leftLabel = allowedOutputs[0] || (isAiMode ? 'Yes' : 'true');
+  const rightLabel = allowedOutputs[1] || (isAiMode ? 'No' : 'false');
+  const displayLabel = data?.label || (isAiMode ? 'AI decision' : 'Condition');
+
   return (
-    <div style={{ position: 'relative', width: 120, height: 80 }}>
+    <div style={{ position: 'relative', width: 140, height: 96 }}>
       <Handle type="target" position={Position.Top} style={{ background: '#111827' }} />
       <div
         style={{
@@ -149,9 +157,13 @@ function ConditionNode({ data }) {
           width: 80,
           height: 80,
           transform: 'translate(-50%, -50%) rotate(45deg)',
-          background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+          background: isAiMode
+            ? 'linear-gradient(135deg, #4f46e5, #6366f1)'
+            : 'linear-gradient(135deg, #7c3aed, #a855f7)',
           borderRadius: 18,
-          boxShadow: '0 8px 18px rgba(88, 28, 135, 0.3)',
+          boxShadow: isAiMode
+            ? '0 8px 18px rgba(67, 56, 202, 0.35)'
+            : '0 8px 18px rgba(88, 28, 135, 0.3)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -167,22 +179,51 @@ function ConditionNode({ data }) {
             padding: '0 6px',
           }}
         >
-          {data.label || 'Condition'}
+          {displayLabel}
         </div>
+        {isAiMode && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              transform: 'rotate(-45deg)',
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.9)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            AI
+          </div>
+        )}
       </div>
-      {/* True / false branches */}
+      {/* Branch handles: positioned at 30% / 70% from left to match original layout */}
       <Handle
         type="source"
         id="true"
         position={Position.Bottom}
-        style={{ left: '30%', background: '#22c55e' }}
+        style={{ left: '30%', transform: 'translateX(-50%)', background: '#22c55e' }}
       />
       <Handle
         type="source"
         id="false"
         position={Position.Bottom}
-        style={{ left: '70%', background: '#ef4444' }}
+        style={{ left: '70%', transform: 'translateX(-50%)', background: '#ef4444' }}
       />
+      {/* Labels under the handles, aligned to same positions */}
+      <div style={{ position: 'absolute', bottom: 2, left: 0, right: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', left: '30%', transform: 'translateX(-50%)', width: 80, textAlign: 'center' }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#166534', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={leftLabel}>
+            {leftLabel}
+          </span>
+        </div>
+        <div style={{ position: 'absolute', left: '70%', transform: 'translateX(-50%)', width: 80, textAlign: 'center' }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#b91c1c', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={rightLabel}>
+            {rightLabel}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
