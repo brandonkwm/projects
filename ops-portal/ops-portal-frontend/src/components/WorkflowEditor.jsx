@@ -682,120 +682,314 @@ function WorkflowCanvas({
                   gap: 6,
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 600 }}>Decision rules</div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>Decision</div>
                 <div style={{ fontSize: 11, color: '#6b7280' }}>
-                  Define IF / AND / OR conditions. The engine can use the <code>true</code> /
-                  <code>false</code> handles from this node to route cases.
+                  Choose between classic IF / AND / OR rules or an AI-assisted decision. The engine can use the{' '}
+                  <code>true</code> / <code>false</code> handles (or custom branches) from this node to route cases.
                 </div>
 
-                {(selectedNode.data?.rules || []).map((rule, index) => (
-                  <div
-                    key={rule.id || index}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                      padding: 6,
-                      borderRadius: 6,
-                      background: '#f3f4f6',
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <select
-                        value={rule.logic || 'AND'}
-                        onChange={(e) => handleDecisionRuleChange(index, 'logic', e.target.value)}
-                        style={{
-                          fontSize: 11,
-                          padding: '4px 6px',
-                          borderRadius: 4,
-                          border: '1px solid #d1d5db',
-                          width: 64,
-                        }}
-                      >
-                        <option value="AND">AND</option>
-                        <option value="OR">OR</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="condition_a"
-                        value={rule.left || ''}
-                        onChange={(e) => handleDecisionRuleChange(index, 'left', e.target.value)}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          padding: '4px 6px',
-                          borderRadius: 4,
-                          border: '1px solid #d1d5db',
-                        }}
-                      />
-                      <select
-                        value={rule.operator || 'equals'}
-                        onChange={(e) => handleDecisionRuleChange(index, 'operator', e.target.value)}
-                        style={{
-                          fontSize: 11,
-                          padding: '4px 6px',
-                          borderRadius: 4,
-                          border: '1px solid #d1d5db',
-                        }}
-                      >
-                        <option value="equals">==</option>
-                        <option value="not_equals">!=</option>
-                        <option value="contains">contains</option>
-                        <option value="greater_than">&gt;</option>
-                        <option value="less_than">&lt;</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="condition_b"
-                        value={rule.right || ''}
-                        onChange={(e) => handleDecisionRuleChange(index, 'right', e.target.value)}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          padding: '4px 6px',
-                          borderRadius: 4,
-                          border: '1px solid #d1d5db',
-                        }}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeDecisionRule(index)}
-                      style={{
-                        alignSelf: 'flex-end',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#ef4444',
-                        fontSize: 11,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Remove rule
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={addDecisionRule}
+                <label style={{ fontSize: 11, fontWeight: 500, marginTop: 4 }}>Mode</label>
+                <select
+                  value={selectedNode.data?.conditionMode || 'rules'}
+                  onChange={(e) =>
+                    setNodes((nds) =>
+                      nds.map((node) =>
+                        node.id === selectedNode.id && node.type === 'condition'
+                          ? {
+                              ...node,
+                              data: {
+                                ...(node.data || {}),
+                                conditionMode: e.target.value,
+                              },
+                            }
+                          : node
+                      )
+                    )
+                  }
                   style={{
-                    marginTop: 4,
-                    padding: '6px 8px',
-                    fontSize: 11,
-                    borderRadius: 999,
-                    border: '1px dashed #9ca3af',
-                    background: '#ffffff',
-                    cursor: 'pointer',
-                    alignSelf: 'flex-start',
+                    fontSize: 12,
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    border: '1px solid #d1d5db',
+                    width: '100%',
+                    marginBottom: 4,
                   }}
                 >
-                  + Add condition
-                </button>
+                  <option value="rules">Rules (IF / AND / OR)</option>
+                  <option value="ai">AI decision</option>
+                </select>
 
-                <div style={{ fontSize: 11, color: '#6b7280' }}>
-                  Connect the green handle to your &quot;true&quot; branch and the red handle to your
-                  &quot;false&quot; branch.
-                </div>
+                {/* Rules-based mode (existing behaviour) */}
+                {(!selectedNode.data?.conditionMode || selectedNode.data?.conditionMode === 'rules') && (
+                  <>
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      Define IF / AND / OR conditions. The engine can use the <code>true</code> /
+                      <code>false</code> handles from this node to route cases.
+                    </div>
+
+                    {(selectedNode.data?.rules || []).map((rule, index) => (
+                      <div
+                        key={rule.id || index}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                          padding: 6,
+                          borderRadius: 6,
+                          background: '#f3f4f6',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <select
+                            value={rule.logic || 'AND'}
+                            onChange={(e) => handleDecisionRuleChange(index, 'logic', e.target.value)}
+                            style={{
+                              fontSize: 11,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              border: '1px solid #d1d5db',
+                              width: 64,
+                            }}
+                          >
+                            <option value="AND">AND</option>
+                            <option value="OR">OR</option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="condition_a"
+                            value={rule.left || ''}
+                            onChange={(e) => handleDecisionRuleChange(index, 'left', e.target.value)}
+                            style={{
+                              flex: 1,
+                              fontSize: 11,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              border: '1px solid #d1d5db',
+                            }}
+                          />
+                          <select
+                            value={rule.operator || 'equals'}
+                            onChange={(e) => handleDecisionRuleChange(index, 'operator', e.target.value)}
+                            style={{
+                              fontSize: 11,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              border: '1px solid #d1d5db',
+                            }}
+                          >
+                            <option value="equals">==</option>
+                            <option value="not_equals">!=</option>
+                            <option value="contains">contains</option>
+                            <option value="greater_than">&gt;</option>
+                            <option value="less_than">&lt;</option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="condition_b"
+                            value={rule.right || ''}
+                            onChange={(e) => handleDecisionRuleChange(index, 'right', e.target.value)}
+                            style={{
+                              flex: 1,
+                              fontSize: 11,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              border: '1px solid #d1d5db',
+                            }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeDecisionRule(index)}
+                          style={{
+                            alignSelf: 'flex-end',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#ef4444',
+                            fontSize: 11,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Remove rule
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={addDecisionRule}
+                      style={{
+                        marginTop: 4,
+                        padding: '6px 8px',
+                        fontSize: 11,
+                        borderRadius: 999,
+                        border: '1px dashed #9ca3af',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        alignSelf: 'flex-start',
+                      }}
+                    >
+                      + Add condition
+                    </button>
+
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      Connect the green handle to your &quot;true&quot; branch and the red handle to your
+                      &quot;false&quot; branch.
+                    </div>
+                  </>
+                )}
+
+                {/* AI-assisted mode */}
+                {selectedNode.data?.conditionMode === 'ai' && (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      padding: 8,
+                      borderRadius: 8,
+                      background: '#eff6ff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#1d4ed8' }}>AI decision</div>
+                    <div style={{ fontSize: 11, color: '#4b5563' }}>
+                      Describe how the AI should route this item. The engine will call an LLM with this instruction and
+                      the payload, then map the AI&apos;s answer onto this node&apos;s outgoing handles.
+                    </div>
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Routing question / instruction</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Example: Decide whether this request should go to HUMAN_REVIEW or AUTO_CLOSE based on risk, amount, and channel. Answer with only one of: HUMAN_REVIEW, AUTO_CLOSE."
+                      value={selectedNode.data?.aiConfig?.question || ''}
+                      onChange={(e) =>
+                        setNodes((nds) =>
+                          nds.map((node) =>
+                            node.id === selectedNode.id && node.type === 'condition'
+                              ? {
+                                  ...node,
+                                  data: {
+                                    ...(node.data || {}),
+                                    aiConfig: {
+                                      ...(node.data?.aiConfig || {}),
+                                      question: e.target.value,
+                                    },
+                                  },
+                                }
+                              : node
+                          )
+                        )
+                      }
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Allowed outputs (labels)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HUMAN_REVIEW, AUTO_CLOSE, UNCLEAR"
+                      value={selectedNode.data?.aiConfig?.allowedOutputs || ''}
+                      onChange={(e) =>
+                        setNodes((nds) =>
+                          nds.map((node) =>
+                            node.id === selectedNode.id && node.type === 'condition'
+                              ? {
+                                  ...node,
+                                  data: {
+                                    ...(node.data || {}),
+                                    aiConfig: {
+                                      ...(node.data?.aiConfig || {}),
+                                      allowedOutputs: e.target.value,
+                                    },
+                                  },
+                                }
+                              : node
+                          )
+                        )
+                      }
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      The engine should constrain the LLM to these labels and map them to outgoing branches (for example
+                      using handle labels or payload fields).
+                    </div>
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Optional few-shot examples</label>
+                    <textarea
+                      rows={3}
+                      placeholder={'Example format:\\nINPUT: {...payload...}\\nOUTPUT: HUMAN_REVIEW — high amount over threshold.\\n---'}
+                      value={selectedNode.data?.aiConfig?.examples || ''}
+                      onChange={(e) =>
+                        setNodes((nds) =>
+                          nds.map((node) =>
+                            node.id === selectedNode.id && node.type === 'condition'
+                              ? {
+                                  ...node,
+                                  data: {
+                                    ...(node.data || {}),
+                                    aiConfig: {
+                                      ...(node.data?.aiConfig || {}),
+                                      examples: e.target.value,
+                                    },
+                                  },
+                                }
+                              : node
+                          )
+                        )
+                      }
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Write decision to payload path (optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. meta.routeDecision"
+                      value={selectedNode.data?.aiConfig?.outputPath || ''}
+                      onChange={(e) =>
+                        setNodes((nds) =>
+                          nds.map((node) =>
+                            node.id === selectedNode.id && node.type === 'condition'
+                              ? {
+                                  ...node,
+                                  data: {
+                                    ...(node.data || {}),
+                                    aiConfig: {
+                                      ...(node.data?.aiConfig || {}),
+                                      outputPath: e.target.value,
+                                    },
+                                  },
+                                }
+                              : node
+                          )
+                        )
+                      }
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      Optional: the engine can persist the chosen label into the payload so downstream tasks or humans
+                      can see how this decision was made.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
