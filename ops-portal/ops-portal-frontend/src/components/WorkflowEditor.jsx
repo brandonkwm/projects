@@ -283,6 +283,20 @@ function WorkflowCanvas({
   const workflowId = initialWorkflow?.id ?? null;
   const { project } = useReactFlow();
 
+  // Default edge appearance: smooth, animated with arrowheads.
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      type: 'smoothstep',
+      animated: true,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 16,
+        height: 16,
+      },
+    }),
+    []
+  );
+
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) || null,
     [nodes, selectedNodeId]
@@ -308,12 +322,6 @@ function WorkflowCanvas({
         addEdge(
           {
             ...params,
-            animated: true,
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-            },
           },
           eds
         )
@@ -655,6 +663,7 @@ function WorkflowCanvas({
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onNodesDelete={onNodesDelete}
+          defaultEdgeOptions={defaultEdgeOptions}
           fitView
         >
           <MiniMap nodeColor="#4f46e5" />
