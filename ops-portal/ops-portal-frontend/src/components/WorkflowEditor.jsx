@@ -280,6 +280,20 @@ function WorkflowCanvas({
   const [requestBodyDescription, setRequestBodyDescription] = useState(
     initialWorkflow?.requestBodyDescription ?? ''
   );
+  const [entryConfig, setEntryConfig] = useState(
+    () =>
+      initialWorkflow?.entryConfig || {
+        httpEnabled: true,
+        emailEnabled: false,
+        emailAddress: '',
+        emailSubjectFilter: '',
+        scheduleEnabled: false,
+        scheduleType: 'daily', // 'daily' | 'cron'
+        scheduleTimeOfDay: '',
+        scheduleTimezone: '',
+        scheduleBusinessDaysOnly: false,
+      }
+  );
   const workflowId = initialWorkflow?.id ?? null;
   const { project } = useReactFlow();
 
@@ -500,6 +514,7 @@ function WorkflowCanvas({
       name,
       description: workflowDescription.trim() || undefined,
       requestBodyDescription: requestBodyDescription.trim() || undefined,
+      entryConfig,
       definition: {
         nodes: nodes.map(({ id: nid, type, position, data }) => ({
           id: nid,
@@ -643,7 +658,8 @@ function WorkflowCanvas({
               color: '#1e40af',
             }}
           >
-            This workflow is triggered by a JSON request body. Tasks and decisions process that payload; a task can lead to another decision.
+            Workflows can be triggered via HTTP API, email ingestion, or on a schedule. Tasks and decisions process a JSON
+            payload; a task can lead to another decision.
           </div>
         </div>
 
@@ -1862,6 +1878,223 @@ function WorkflowCanvas({
             Select a node on the canvas to configure its details.
           </div>
         )}
+
+        {/* Workflow-level: entry channels & triggers */}
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 12,
+            borderTop: '1px solid #e5e7eb',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 600 }}>Entry channels & triggers</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>
+            Define how this workflow is started: via HTTP API, email ingestion, or on a schedule.
+          </div>
+
+          {/* HTTP API (always available, cannot be disabled for now) */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+            <input type="checkbox" checked={entryConfig.httpEnabled ?? true} readOnly />
+            <span>
+              HTTP API &mdash; POST <code style={{ fontSize: 10 }}>/workflows/{displayId}/run</code>
+            </span>
+          </label>
+
+          {/* Email ingestion */}
+          <div
+            style={{
+              marginTop: 4,
+              padding: 8,
+              borderRadius: 6,
+              background: '#f3f4ff',
+              border: '1px solid #e5e7eb',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+              <input
+                type="checkbox"
+                checked={!!entryConfig.emailEnabled}
+                onChange={(e) =>
+                  setEntryConfig((cfg) => ({
+                    ...cfg,
+                    emailEnabled: e.target.checked,
+                  }))
+                }
+              />
+              <span>Email ingestion (e.g. send to a specific mailbox and parse into JSON)</span>
+            </label>
+            {entryConfig.emailEnabled && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Ingestion address (e.g. ops+workflow@bank.com)"
+                  value={entryConfig.emailAddress || ''}
+                  onChange={(e) =>
+                    setEntryConfig((cfg) => ({
+                      ...cfg,
+                      emailAddress: e.target.value,
+                    }))
+                  }
+                  style={{
+                    fontSize: 11,
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Optional subject filter (e.g. [CARD_DISPUTE])"
+                  value={entryConfig.emailSubjectFilter || ''}
+                  onChange={(e) =>
+                    setEntryConfig((cfg) => ({
+                      ...cfg,
+                      emailSubjectFilter: e.target.value,
+                    }))
+                  }
+                  style={{
+                    fontSize: 11,
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    border: '1px solid #d1d5db',
+                  }}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Scheduled trigger */}
+          <div
+            style={{
+              marginTop: 4,
+              padding: 8,
+              borderRadius: 6,
+              background: '#ecfeff',
+              border: '1px solid #bae6fd',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+              <input
+                type="checkbox"
+                checked={!!entryConfig.scheduleEnabled}
+                onChange={(e) =>
+                  setEntryConfig((cfg) => ({
+                    ...cfg,
+                    scheduleEnabled: e.target.checked,
+                  }))
+                }
+              />
+              <span>Scheduled trigger</span>
+            </label>
+
+            {entryConfig.scheduleEnabled && (
+              <>
+                <label style={{ fontSize: 11, fontWeight: 500 }}>Schedule type</label>
+                <select
+                  value={entryConfig.scheduleType || 'daily'}
+                  onChange={(e) =>
+                    setEntryConfig((cfg) => ({
+                      ...cfg,
+                      scheduleType: e.target.value,
+                    }))
+                  }
+                  style={{
+                    fontSize: 11,
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    border: '1px solid #d1d5db',
+                  }}
+                >
+                  <option value="daily">Daily time</option>
+                  <option value="cron">Cron expression</option>
+                </select>
+
+                {entryConfig.scheduleType !== 'cron' ? (
+                  <>
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Time of day</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 09:00"
+                      value={entryConfig.scheduleTimeOfDay || ''}
+                      onChange={(e) =>
+                        setEntryConfig((cfg) => ({
+                          ...cfg,
+                          scheduleTimeOfDay: e.target.value,
+                        }))
+                      }
+                      style={{
+                        fontSize: 11,
+                        padding: '4px 6px',
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Timezone (e.g. Asia/Singapore)"
+                      value={entryConfig.scheduleTimezone || ''}
+                      onChange={(e) =>
+                        setEntryConfig((cfg) => ({
+                          ...cfg,
+                          scheduleTimezone: e.target.value,
+                        }))
+                      }
+                      style={{
+                        fontSize: 11,
+                        padding: '4px 6px',
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!entryConfig.scheduleBusinessDaysOnly}
+                        onChange={(e) =>
+                          setEntryConfig((cfg) => ({
+                            ...cfg,
+                            scheduleBusinessDaysOnly: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span>Business days only (Mon–Fri)</span>
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Cron expression</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 0 9 * * MON-FRI"
+                      value={entryConfig.scheduleCron || ''}
+                      onChange={(e) =>
+                        setEntryConfig((cfg) => ({
+                          ...cfg,
+                          scheduleCron: e.target.value,
+                        }))
+                      }
+                      style={{
+                        fontSize: 11,
+                        padding: '4px 6px',
+                        borderRadius: 6,
+                        border: '1px solid #d1d5db',
+                      }}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Workflow-level: request body note */}
         <div
