@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+:root {
+  --color-bank-primary: #0d9488;
+  --color-bank-deep: #0f766e;
+  --color-bank-surface: #f0fdfa;
+  --color-bank-muted: #5eead4;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
