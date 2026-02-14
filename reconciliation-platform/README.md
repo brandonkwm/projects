@@ -2,6 +2,14 @@
 
 Reconciliation engine: compare two datasets (key + value fields) via **file upload** (CSV or JSON), configurable rules, and **deterministic explanations** from the diff (no guessing). Dashboard metrics, Semantic Q&A, and run detail with underlying datasets.
 
+## Problem statement
+
+Finance and operations teams routinely need to reconcile two sides of the same process (e.g. cash vs bank, ledger vs sub-ledger, internal vs external statements). Doing this manually is slow, error-prone, and hard to audit. Ad-hoc scripts or spreadsheets lack reusable rules, clear explanations for breaks, and a single place to see metrics and history. This platform addresses that by providing a **structured reconciliation engine** with configurable types, file-based upload (CSV/JSON), **deterministic break explanations** (no black-box or LLM guessing), and a dashboard for runs and metrics—so teams can compare datasets reliably and understand exactly why items break.
+
+## Opportunity
+
+The **opportunity for AI** is to **explain the breaks**. The engine already produces deterministic, rule-based explanations (what differed and how). AI can sit on top of that: given break context (Side A vs Side B rows, reconciliation type, and the deterministic diff), an LLM can generate **natural-language explanations**—plain English summaries, suggested root causes, or next steps—that help ops and finance teams quickly understand and act on breaks without reading raw diffs. That keeps the comparison itself auditable and deterministic while using AI where it adds the most value: interpretation and communication.
+
 ## Scope
 
 - **Upload & compare:** Users upload two files (Side A + Side B, CSV or JSON). Backend parses, aligns by key, compares value fields using the selected reconciliation type’s rules, and creates a run with breaks and **deterministic** explanations (describes the diff; no hardcoded “FX” or LLM guessing).
