@@ -4,6 +4,23 @@ Concept digital banking webapp: **tokenize fiat → use blockchain as a payment 
 
 Portfolio prototype (no real money, no real blockchain). Built with React, TypeScript, Vite, Tailwind CSS, and React Router.
 
+---
+
+## Context & problem
+
+**Problem:** Even with modern platforms (e.g. Wise), cross-border transfers often still take **1–3 business days** for funds to arrive. Settlement depends on correspondent banks and local clearing systems, so speed and predictability are limited.
+
+**Opportunity:** A bank that plugs into the **Ethereum network** can issue a fiat-backed token, let customers send it on-chain, and **convert the token back to fiat** when the recipient redeems. The blockchain becomes the settlement layer; the bank provides mint/redeem and custody. Funds can be available as soon as the recipient’s bank sees the on-chain transfer and credits the account — without waiting for legacy correspondent or local clearing cycles.
+
+**Same-bank network:** When sender and recipient are both customers of the **same bank (or same network)** that supports this rail:
+
+- **Cross-border and cross-currency transfer can be effectively instantaneous** after block confirmations (~minutes), instead of days.
+- There is **no need to integrate with local payment rails** (e.g. PromptPay, DuitNow, QRIS) for the core transfer. The movement of value happens on-chain; the bank only needs to credit the recipient’s account in the chosen currency (with FX at redeem time if needed). Local rails can still be used for funding or withdrawal at the edges, but the “international leg” is the blockchain.
+
+This prototype illustrates that flow: tokenize → send on-chain → recipient redeems to fiat (same or different currency), with a **sender view** and **recipient view** to show both sides of the same rail.
+
+---
+
 ## Run locally
 
 ```bash
