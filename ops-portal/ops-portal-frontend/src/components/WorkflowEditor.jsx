@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   ReactFlowProvider,
   useNodesState,
@@ -322,6 +322,20 @@ function WorkflowCanvas({
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [saveBlockingMessages, setSaveBlockingMessages] = useState([]);
   const { project } = useReactFlow();
+  const taskLabelSignatureRef = useRef('');
+
+  // Save errors are from the last failed save; clear when task labels change (not when only dragging — positions update too).
+  useEffect(() => {
+    const sig = nodes
+      .filter((n) => n?.type === 'task')
+      .map((n) => `${n.id ?? '?'}:${(n.data?.label != null ? String(n.data.label) : '').trim()}`)
+      .sort()
+      .join('|');
+    if (sig !== taskLabelSignatureRef.current) {
+      taskLabelSignatureRef.current = sig;
+      setSaveBlockingMessages([]);
+    }
+  }, [nodes]);
 
   const auditWorkflowId = useMemo(() => {
     const name = (workflowName || 'Unnamed').trim();
@@ -684,7 +698,7 @@ function WorkflowCanvas({
     const payload = buildWorkflowPayload();
     const { ok, errors } = validateTaskLabels(payload.definition.nodes);
     if (!ok) {
-      setSaveBlockingMessages(errors.map((e) => `${e.message} (node id: ${e.nodeId})`));
+      setSaveBlockingMessages([...new Set(errors.map((e) => e.message))]);
       return;
     }
     setSaveBlockingMessages([]);
@@ -816,6 +830,10 @@ function WorkflowCanvas({
           }}
         >
           <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Workflow building blocks</h3>
+          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 10, lineHeight: 1.4 }}>
+            Drag the same block onto the canvas as many times as you need. There is <strong>no limit</strong> on how many tasks,
+            conditions, or other steps a workflow can contain.
+          </div>
           {nodeTypesPalette.map((node) => (
             <div
               key={node.type}
@@ -848,7 +866,7 @@ function WorkflowCanvas({
             }}
           >
             Select the <strong>Start</strong> node to configure entry channels (HTTP, email, schedule). Tasks and decisions
-            process a JSON payload; a task can lead to another decision.
+            process a JSON payload; a task can lead to another decision. Add as many steps as your process requires.
           </div>
         </div>
 
@@ -912,8 +930,9 @@ function WorkflowCanvas({
             />
             {selectedNode.type === 'task' && (
               <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 6, lineHeight: 1.35 }}>
-                Use a short <strong>unique</strong> label (shown on the canvas). The audit log groups changes under this
-                name.
+                Use a short label <strong>unique among all tasks</strong> (case-sensitive: <code style={{ fontSize: 10 }}>a</code>{' '}
+                and <code style={{ fontSize: 10 }}>A</code> differ). Check the minimap—another task off-screen may share the same
+                text. Audits group changes under this name.
               </div>
             )}
             {taskLabelWarningsForSelection.length > 0 && (
