@@ -91,7 +91,7 @@ function indexByKey(rows, keyField) {
   return out;
 }
 
-function valueMatches(aVal, bVal, ruleType, params) {
+export function valueMatches(aVal, bVal, ruleType, params) {
   const a = aVal != null ? String(aVal).trim() : "";
   const b = bVal != null ? String(bVal).trim() : "";
   if (ruleType === "numeric_tolerance") {

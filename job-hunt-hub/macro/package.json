@@ -1,0 +1,14 @@
+{
+  "name": "job-hunt-hub-macro",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Playwright macro: fills job application forms from Job Hunt Hub export",
+  "type": "module",
+  "scripts": {
+    "start": "node run.js",
+    "run": "node run.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

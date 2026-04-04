@@ -10,6 +10,10 @@ export default function RunDetail({ runId, onBack }) {
   const [askLoading, setAskLoading] = useState(false);
   const [expandedBreakId, setExpandedBreakId] = useState(null);
   const [expandedExpId, setExpandedExpId] = useState(null);
+  const [reinvestigationLoading, setReinvestigationLoading] = useState(false);
+  const [reinvestigationError, setReinvestigationError] = useState(null);
+  const [proposalDecisionLoading, setProposalDecisionLoading] = useState(false);
+  const [proposalDecisionError, setProposalDecisionError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +62,45 @@ export default function RunDetail({ runId, onBack }) {
   if (error) return <div className="text-red-600">Error: {error}</div>;
   if (!data) return null;
 
-  const { run, breaks: breakList, explanations: explanationList, datasets: runDatasets } = data;
+  const { run, breaks: breakList, explanations: explanationList, datasets: runDatasets, investigations = [] } = data;
+  const investigation = investigations?.[0] ?? null;
+  const matchProposals = investigation?.matchProposals || [];
+
+  const handleReinvestigate = async () => {
+    setReinvestigationLoading(true);
+    setReinvestigationError(null);
+    try {
+      await fetch('/api/investigate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId }),
+      });
+      const full = await runsApi.getFull(runId);
+      setData(full);
+    } catch (e) {
+      setReinvestigationError(e.message || String(e));
+    } finally {
+      setReinvestigationLoading(false);
+    }
+  };
+
+  const handleProposalDecision = async (proposalId, action) => {
+    setProposalDecisionLoading(true);
+    setProposalDecisionError(null);
+    try {
+      const nextAction = action === 'accept' ? 'accept' : 'reject';
+      await fetch(`/api/match-proposals/${encodeURIComponent(proposalId)}/${nextAction}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const full = await runsApi.getFull(runId);
+      setData(full);
+    } catch (e) {
+      setProposalDecisionError(e.message || String(e));
+    } finally {
+      setProposalDecisionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -181,9 +223,105 @@ export default function RunDetail({ runId, onBack }) {
         )}
       </div>
 
+      {/* Deterministic investigate loop */}
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-slate-800 mb-2">Investigation</h3>
+            <p className="text-sm text-slate-600 mb-0">Auditable diagnostic steps and ranked hypotheses from deterministic evidence.</p>
+          </div>
+          <div className="shrink-0">
+            <button
+              type="button"
+              onClick={handleReinvestigate}
+              disabled={reinvestigationLoading}
+              className="px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 text-sm"
+            >
+              {reinvestigationLoading ? 'Re-running…' : 'Re-run'}
+            </button>
+            {reinvestigationError && <p className="mt-2 text-sm text-red-600">{reinvestigationError}</p>}
+          </div>
+        </div>
+
+        {!investigation ? (
+          <p className="mt-3 text-sm text-slate-500">Investigation pending…</p>
+        ) : (
+          <>
+            {investigation.goal && (
+              <p className="mt-3 text-xs text-slate-600">
+                Goal: {investigation.goal}
+              </p>
+            )}
+
+            {/* Steps (audit trail) */}
+            <div className="mt-4">
+              <p className="text-xs font-medium text-slate-600 mb-2">Diagnostic steps</p>
+              {investigation.steps?.length ? (
+                <ol className="space-y-3">
+                  {investigation.steps.map((s, i) => {
+                    const label = s.label || s.type || `Step ${i + 1}`;
+                    return (
+                      <li key={s.id || i} className="rounded border border-slate-200 bg-slate-50/50 p-3">
+                        <p className="text-xs font-semibold text-slate-700 mb-1">
+                          {i + 1}. {label}
+                        </p>
+                        <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-auto max-h-44">
+                          {JSON.stringify(s.result ?? s, null, 2)}
+                        </pre>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="text-sm text-slate-500">No steps recorded.</p>
+              )}
+            </div>
+
+            {/* Hypotheses */}
+            <div className="mt-4">
+              <p className="text-xs font-medium text-slate-600 mb-2">Ranked hypotheses</p>
+              {investigation.hypotheses?.length ? (
+                <div className="space-y-3">
+                  {investigation.hypotheses.map((h) => (
+                    <div key={h.id || h.title} className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-indigo-900">{h.title}</p>
+                          <p className="text-xs text-slate-600 mt-1">
+                            Confidence: {Math.round((h.confidence ?? 0) * 100)}%
+                          </p>
+                        </div>
+                      </div>
+                      {h.evidence?.summary && (
+                        <p className="text-sm text-slate-700 mt-2">{h.evidence.summary}</p>
+                      )}
+                      {h.recommendedNextSteps?.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-indigo-900 mb-1">Recommended next diagnostics</p>
+                          <ul className="text-sm list-disc list-inside space-y-1">
+                            {h.recommendedNextSteps.map((step, idx) => (
+                              <li key={idx}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No hypotheses recorded.</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Mismatches & orphans */}
       <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm">
         <h3 className="font-semibold text-slate-800 p-4 border-b border-slate-200">Mismatches & orphan records</h3>
+        {proposalDecisionError && (
+          <p className="px-4 pb-2 text-sm text-red-600">{proposalDecisionError}</p>
+        )}
         {breakList.length === 0 ? (
           <div className="p-4 text-slate-500 text-sm">No breaks in this run.</div>
         ) : (
@@ -215,26 +353,91 @@ export default function RunDetail({ runId, onBack }) {
                     {b.differingFields?.length > 0 && (
                       <p className="mt-2 text-xs text-slate-600">Differing fields: {b.differingFields.join(', ')}</p>
                     )}
-                    {/* Explanations for this break */}
-                    <div className="mt-4">
-                      <p className="text-xs font-medium text-slate-600 mb-2">LLM explanations</p>
-                      {explanationList.filter((e) => e.breakId === b.id).length === 0 ? (
-                        <p className="text-xs text-slate-500">No explanation for this break.</p>
-                      ) : (
-                        <ul className="space-y-3">
-                          {explanationList.filter((e) => e.breakId === b.id).map((exp) => (
-                            <ExplanationCard
-                              key={exp.id}
-                              explanation={exp}
-                              expanded={expandedExpId === exp.id}
-                              onToggle={() => setExpandedExpId(expandedExpId === exp.id ? null : exp.id)}
-                              onAccept={() => handleAcceptReject(exp.id, 'accept')}
-                              onReject={() => handleAcceptReject(exp.id, 'reject')}
-                            />
+
+                {/* Historical match suggestions for orphan breaks */}
+                {(b.outcome === 'orphan_a' || b.outcome === 'orphan_b') && (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-slate-600 mb-2">Historical match suggestions</p>
+                    {matchProposals.filter((p) => p.breakId === b.id).length === 0 ? (
+                      <p className="text-xs text-slate-500">No value-fields-matching candidates found in the last 7 days.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {matchProposals
+                          .filter((p) => p.breakId === b.id)
+                          .slice(0, 3)
+                          .map((p) => (
+                            <div key={p.id} className="rounded border border-slate-200 bg-white p-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">
+                                    Likely match in run <code className="font-mono text-xs">{p.candidate?.priorRunId}</code>
+                                  </p>
+                                  <p className="text-xs text-slate-600 mt-1">
+                                    Matched fields: {(p.evidence?.matchedValueFields || []).join(', ') || '—'}
+                                  </p>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${
+                                  p.status === 'accepted'
+                                    ? 'bg-green-100 text-green-800'
+                                    : p.status === 'rejected'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {p.status}
+                                </span>
+                              </div>
+
+                              <pre className="mt-2 p-2 bg-slate-50 rounded border text-xs overflow-auto max-h-32">
+                                {JSON.stringify(p.candidate?.row ?? null, null, 2)}
+                              </pre>
+
+                              <div className="flex gap-2 pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleProposalDecision(p.id, 'accept')}
+                                  disabled={proposalDecisionLoading || p.status !== 'pending'}
+                                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  Match
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleProposalDecision(p.id, 'reject')}
+                                  disabled={proposalDecisionLoading || p.status !== 'pending'}
+                                  className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+                                >
+                                  Not a match
+                                </button>
+                              </div>
+                            </div>
                           ))}
-                        </ul>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                    {/* Explanations for this break */}
+                    {b.outcome !== 'resolved_match' && (
+                      <div className="mt-4">
+                        <p className="text-xs font-medium text-slate-600 mb-2">LLM explanations</p>
+                        {explanationList.filter((e) => e.breakId === b.id).length === 0 ? (
+                          <p className="text-xs text-slate-500">No explanation for this break.</p>
+                        ) : (
+                          <ul className="space-y-3">
+                            {explanationList.filter((e) => e.breakId === b.id).map((exp) => (
+                              <ExplanationCard
+                                key={exp.id}
+                                explanation={exp}
+                                expanded={expandedExpId === exp.id}
+                                onToggle={() => setExpandedExpId(expandedExpId === exp.id ? null : exp.id)}
+                                onAccept={() => handleAcceptReject(exp.id, 'accept')}
+                                onReject={() => handleAcceptReject(exp.id, 'reject')}
+                              />
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </li>
@@ -247,12 +450,20 @@ export default function RunDetail({ runId, onBack }) {
 }
 
 function breakTypeLabel(outcome) {
-  const labels = { mismatch: 'Mismatch', orphan_a: 'Orphan (A)', orphan_b: 'Orphan (B)', duplicate_key: 'Duplicate key', timing_drift: 'Timing drift' };
+  const labels = {
+    mismatch: 'Mismatch',
+    orphan_a: 'Orphan (A)',
+    orphan_b: 'Orphan (B)',
+    duplicate_key: 'Duplicate key',
+    timing_drift: 'Timing drift',
+    resolved_match: 'Resolved match',
+  };
   return labels[outcome] || outcome || 'Break';
 }
 
 function breakTypeClass(outcome) {
   if (outcome === 'mismatch') return 'bg-amber-100 text-amber-800';
+  if (outcome === 'resolved_match') return 'bg-green-100 text-green-800';
   if (outcome === 'orphan_a' || outcome === 'orphan_b') return 'bg-slate-200 text-slate-700';
   if (outcome === 'duplicate_key') return 'bg-rose-100 text-rose-800';
   if (outcome === 'timing_drift') return 'bg-sky-100 text-sky-800';

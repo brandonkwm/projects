@@ -1,6 +1,7 @@
 import express from "express";
 import * as runStore from "../store/runs.js";
 import * as explanationStore from "../store/explanations.js";
+import * as investigationsStore from "../store/investigations.js";
 
 const router = express.Router();
 
@@ -25,7 +26,8 @@ router.get("/:id/full", (req, res) => {
   const breaks = runStore.listBreaks(req.params.id);
   const explanations = explanationStore.list({ runId: req.params.id });
   const datasets = runStore.getDatasets(req.params.id);
-  res.json({ run, breaks, explanations, datasets });
+  const investigations = investigationsStore.listByRunId(req.params.id);
+  res.json({ run, breaks, explanations, datasets, investigations });
 });
 
 router.post("/", (req, res) => {

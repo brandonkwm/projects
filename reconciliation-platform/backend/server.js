@@ -6,6 +6,8 @@ import explanationsRouter from "./routes/explanations.js";
 import dashboardRouter from "./routes/dashboard.js";
 import askRouter from "./routes/ask.js";
 import compareRouter from "./routes/compare.js";
+import investigateRouter from "./routes/investigate.js";
+import matchProposalsRouter from "./routes/match-proposals.js";
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -19,6 +21,8 @@ app.use("/api/explanations", explanationsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/ask", askRouter);
 app.use("/api/compare", compareRouter);
+app.use("/api/investigate", investigateRouter);
+app.use("/api/match-proposals", matchProposalsRouter);
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 

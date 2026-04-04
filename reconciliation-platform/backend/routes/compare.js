@@ -3,8 +3,10 @@ import multer from "multer";
 import * as runStore from "../store/runs.js";
 import * as explanationStore from "../store/explanations.js";
 import * as typeStore from "../store/reconciliation-types.js";
+import * as investigationsStore from "../store/investigations.js";
 import { parseToRows } from "../lib/parseFiles.js";
 import { compare as runCompare, explainBreak } from "../lib/compare.js";
+import { runInvestigation } from "../lib/investigateAgent.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
 
@@ -64,6 +66,44 @@ router.post("/", upload.fields([{ name: "sideA", maxCount: 1 }, { name: "sideB",
         reasoningSteps,
       });
     }
+
+    // Auto-run deterministic "agentic" investigation for this run (stub-first, no LLM calls).
+    const daysBack = 7;
+    const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+    const historyRuns = runStore
+      .listRuns()
+      .filter((r) => r.id !== run.id && r.reconciliationTypeId === reconciliationTypeId)
+      .filter((r) => new Date(r.startedAt).getTime() >= cutoffMs)
+      .map((r) => {
+        const datasets = runStore.getDatasets(r.id);
+        if (!datasets) return null;
+        return {
+          runId: r.id,
+          startedAt: r.startedAt,
+          sideA: datasets.sideA || [],
+          sideB: datasets.sideB || [],
+        };
+      })
+      .filter(Boolean);
+
+    const inv = runInvestigation({
+      runId: run.id,
+      reconciliationTypeId,
+      config: { keyField, valueFields },
+      breaks: breakIds,
+      sideARows,
+      sideBRows,
+      historyRuns,
+      goal: "Investigate reconciliation breaks",
+    });
+    investigationsStore.create({
+      runId: run.id,
+      reconciliationTypeId,
+      goal: "Investigate reconciliation breaks",
+      steps: inv.steps,
+      hypotheses: inv.hypotheses,
+      matchProposals: inv.matchProposals || [],
+    });
 
     res.status(201).json({
       run,

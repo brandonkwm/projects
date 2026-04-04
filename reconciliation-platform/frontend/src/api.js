@@ -64,3 +64,8 @@ export const compare = {
     });
   },
 };
+
+export const investigations = {
+  listByRunId: (runId) => request(`/investigate?runId=${encodeURIComponent(runId)}`),
+  run: (body) => request('/investigate', { method: 'POST', body: JSON.stringify(body) }),
+};

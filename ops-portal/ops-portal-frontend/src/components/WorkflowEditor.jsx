@@ -138,13 +138,15 @@ function TaskNode({ data }) {
 
 function ConditionNode({ data }) {
   const isAiMode = data?.conditionMode === 'ai';
-  const allowedOutputs = (data?.aiConfig?.allowedOutputs || '')
+  const isCouncilMode = data?.conditionMode === 'council';
+  const config = isCouncilMode ? data?.councilConfig : data?.aiConfig;
+  const allowedOutputs = (config?.allowedOutputs || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const leftLabel = allowedOutputs[0] || (isAiMode ? 'Yes' : 'true');
-  const rightLabel = allowedOutputs[1] || (isAiMode ? 'No' : 'false');
-  const displayLabel = data?.label || (isAiMode ? 'AI decision' : 'Condition');
+  const leftLabel = allowedOutputs[0] || (isAiMode || isCouncilMode ? 'Yes' : 'true');
+  const rightLabel = allowedOutputs[1] || (isAiMode || isCouncilMode ? 'No' : 'false');
+  const displayLabel = data?.label || (isCouncilMode ? 'Council' : isAiMode ? 'AI decision' : 'Condition');
 
   return (
     <div style={{ position: 'relative', width: 140, height: 96 }}>
@@ -157,11 +159,15 @@ function ConditionNode({ data }) {
           width: 80,
           height: 80,
           transform: 'translate(-50%, -50%) rotate(45deg)',
-          background: isAiMode
+          background: isCouncilMode
+            ? 'linear-gradient(135deg, #0f766e, #14b8a6)'
+            : isAiMode
             ? 'linear-gradient(135deg, #4f46e5, #6366f1)'
             : 'linear-gradient(135deg, #7c3aed, #a855f7)',
           borderRadius: 18,
-          boxShadow: isAiMode
+          boxShadow: isCouncilMode
+            ? '0 8px 18px rgba(15, 118, 110, 0.35)'
+            : isAiMode
             ? '0 8px 18px rgba(67, 56, 202, 0.35)'
             : '0 8px 18px rgba(88, 28, 135, 0.3)',
           display: 'flex',
@@ -195,6 +201,22 @@ function ConditionNode({ data }) {
             }}
           >
             AI
+          </div>
+        )}
+        {isCouncilMode && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              transform: 'rotate(-45deg)',
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.9)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Council
           </div>
         )}
       </div>
@@ -504,6 +526,102 @@ function WorkflowCanvas({
     [selectedNodeId, setNodes]
   );
 
+  const addCouncilRole = useCallback(() => {
+    if (!selectedNodeId) return;
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id !== selectedNodeId || node.type !== 'condition') return node;
+        const roles = Array.isArray(node.data?.councilConfig?.roles) ? [...node.data.councilConfig.roles] : [];
+        roles.push({
+          id: `role-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          name: 'New role',
+          instruction: 'Describe this perspective\'s mandate.',
+        });
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            councilConfig: {
+              ...(node.data?.councilConfig || {}),
+              roles,
+            },
+          },
+        };
+      })
+    );
+  }, [selectedNodeId, setNodes]);
+
+  const removeCouncilRole = useCallback(
+    (index) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== selectedNodeId || node.type !== 'condition') return node;
+          const roles = Array.isArray(node.data?.councilConfig?.roles) ? [...node.data.councilConfig.roles] : [];
+          roles.splice(index, 1);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              councilConfig: {
+                ...(node.data?.councilConfig || {}),
+                roles,
+              },
+            },
+          };
+        })
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
+
+  const updateCouncilRole = useCallback(
+    (index, field, value) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== selectedNodeId || node.type !== 'condition') return node;
+          const roles = Array.isArray(node.data?.councilConfig?.roles) ? [...node.data.councilConfig.roles] : [];
+          if (!roles[index]) return node;
+          roles[index] = { ...roles[index], [field]: value };
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              councilConfig: {
+                ...(node.data?.councilConfig || {}),
+                roles,
+              },
+            },
+          };
+        })
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
+
+  const updateCouncilConfig = useCallback(
+    (field, value) => {
+      if (!selectedNodeId) return;
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== selectedNodeId || node.type !== 'condition') return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              councilConfig: {
+                ...(node.data?.councilConfig || {}),
+                [field]: value,
+              },
+            },
+          };
+        })
+      );
+    },
+    [selectedNodeId, setNodes]
+  );
+
   const saveWorkflow = useCallback(() => {
     const name = (workflowName || 'Unnamed').trim();
     const id =
@@ -750,7 +868,7 @@ function WorkflowCanvas({
               >
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Decision</div>
                 <div style={{ fontSize: 11, color: '#6b7280' }}>
-                  Choose between classic IF / AND / OR rules or an AI-assisted decision. The engine can use the{' '}
+                  Choose rules, a single AI decision, or a Council (multi-agent debate). The engine uses the{' '}
                   <code>true</code> / <code>false</code> handles (or custom branches) from this node to route cases.
                 </div>
 
@@ -766,6 +884,20 @@ function WorkflowCanvas({
                               data: {
                                 ...(node.data || {}),
                                 conditionMode: e.target.value,
+                                ...(e.target.value === 'council' && !node.data?.councilConfig
+                                  ? {
+                                      councilConfig: {
+                                        question: node.data?.aiConfig?.question || '',
+                                        allowedOutputs: node.data?.aiConfig?.allowedOutputs || '',
+                                        outputPath: node.data?.aiConfig?.outputPath || '',
+                                        roles: [
+                                          { id: 'role-1', name: 'Customer impact', instruction: 'Argue from the perspective of customer experience and impact.' },
+                                          { id: 'role-2', name: 'Compliance / risk', instruction: 'Argue from the perspective of regulatory and risk controls.' },
+                                          { id: 'role-3', name: 'Operations capacity', instruction: 'Argue from the perspective of ops capacity and workload.' },
+                                        ],
+                                      },
+                                    }
+                                  : {}),
                               },
                             }
                           : node
@@ -783,6 +915,7 @@ function WorkflowCanvas({
                 >
                   <option value="rules">Rules (IF / AND / OR)</option>
                   <option value="ai">AI decision</option>
+                  <option value="council">Council (multi-agent)</option>
                 </select>
 
                 {/* Rules-based mode (existing behaviour) */}
@@ -1054,6 +1187,149 @@ function WorkflowCanvas({
                       Optional: the engine can persist the chosen label into the payload so downstream tasks or humans
                       can see how this decision was made.
                     </div>
+                  </div>
+                )}
+
+                {/* Council (multi-agent) mode */}
+                {selectedNode.data?.conditionMode === 'council' && (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      padding: 8,
+                      borderRadius: 8,
+                      background: '#f0fdf4',
+                      border: '1px solid #99f6e4',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#0f766e' }}>Council (multi-agent)</div>
+                    <div style={{ fontSize: 11, color: '#065f46' }}>
+                      Multiple agent roles debate the same question; a moderator synthesizes and picks one outcome. Provides oversight and reduces reliance on a single prompt.
+                    </div>
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Shared question (for all roles)</label>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Should this case go to HUMAN_REVIEW or AUTO_CLOSE? Consider risk, amount, and channel."
+                      value={selectedNode.data?.councilConfig?.question || ''}
+                      onChange={(e) => updateCouncilConfig('question', e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #99f6e4',
+                      }}
+                    />
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Allowed outputs (comma-separated)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HUMAN_REVIEW, AUTO_CLOSE, ESCALATE"
+                      value={selectedNode.data?.councilConfig?.allowedOutputs || ''}
+                      onChange={(e) => updateCouncilConfig('allowedOutputs', e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #99f6e4',
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: '#065f46' }}>
+                      The moderator must choose exactly one of these labels. Map each to an outgoing branch (e.g. green = first, red = second).
+                    </div>
+
+                    <label style={{ fontSize: 11, fontWeight: 500 }}>Write decision to payload path (optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. meta.councilDecision"
+                      value={selectedNode.data?.councilConfig?.outputPath || ''}
+                      onChange={(e) => updateCouncilConfig('outputPath', e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #99f6e4',
+                      }}
+                    />
+
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#0f766e', marginTop: 4 }}>Agencies (roles)</div>
+                    <div style={{ fontSize: 11, color: '#065f46', marginBottom: 4 }}>
+                      Each role argues from one perspective. The engine runs each agent, then a moderator synthesizes into one of the allowed outputs.
+                    </div>
+                    {(selectedNode.data?.councilConfig?.roles || []).map((role, index) => (
+                      <div
+                        key={role.id}
+                        style={{
+                          padding: 8,
+                          borderRadius: 6,
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: '#047857' }}>Role {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeCouncilRole(index)}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#b91c1c',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Role name (e.g. Compliance)"
+                          value={role.name || ''}
+                          onChange={(e) => updateCouncilRole(index, 'name', e.target.value)}
+                          style={{
+                            padding: '4px 6px',
+                            fontSize: 12,
+                            borderRadius: 4,
+                            border: '1px solid #a7f3d0',
+                          }}
+                        />
+                        <textarea
+                          rows={2}
+                          placeholder="Instruction for this role (e.g. Argue from regulatory and risk perspective only.)"
+                          value={role.instruction || ''}
+                          onChange={(e) => updateCouncilRole(index, 'instruction', e.target.value)}
+                          style={{
+                            padding: '4px 6px',
+                            fontSize: 11,
+                            borderRadius: 4,
+                            border: '1px solid #a7f3d0',
+                            resize: 'vertical',
+                          }}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addCouncilRole}
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        borderRadius: 999,
+                        border: '1px dashed #0d9488',
+                        background: '#ffffff',
+                        color: '#0f766e',
+                        cursor: 'pointer',
+                        alignSelf: 'flex-start',
+                      }}
+                    >
+                      + Add agency (role)
+                    </button>
                   </div>
                 )}
               </div>

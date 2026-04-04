@@ -66,3 +66,55 @@ export function setDatasets(runId, sideA, sideB) {
 export function getDatasets(runId) {
   return datasetsByRunId.get(runId) || null;
 }
+
+function clampNonNegative(n) {
+  return n != null && Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+export function updateBreak(runId, breakId, patch) {
+  const list = breaksByRunId.get(runId) ?? [];
+  const i = list.findIndex((b) => b.id === breakId);
+  if (i === -1) return null;
+  const next = { ...list[i], ...(typeof patch === "function" ? patch(list[i]) : patch) };
+  list[i] = next;
+  breaksByRunId.set(runId, list);
+  return next;
+}
+
+/**
+ * Immediately reclassify an orphan break as a resolved match.
+ * - Decrements the relevant orphan counter
+ * - Increments matches
+ * - Fills the missing-side row (sideA or sideB) from the proposal candidate row
+ */
+export function resolveOrphanBreakAsMatch(runId, breakId, { candidateRow }) {
+  const run = runs.find((r) => r.id === runId);
+  if (!run) return null;
+
+  const list = breaksByRunId.get(runId) ?? [];
+  const br = list.find((b) => b.id === breakId);
+  if (!br) return null;
+
+  if (br.outcome !== "orphan_a" && br.outcome !== "orphan_b") return null;
+  if (!candidateRow) return null;
+
+  const originalOutcome = br.outcome;
+
+  if (originalOutcome === "orphan_a") {
+    // Fill missing Side B
+    br.sideB = candidateRow;
+    br.outcome = "resolved_match";
+    br.differingFields = [];
+    run.counts.orphansA = clampNonNegative(run.counts.orphansA - 1);
+  } else if (originalOutcome === "orphan_b") {
+    // Fill missing Side A
+    br.sideA = candidateRow;
+    br.outcome = "resolved_match";
+    br.differingFields = [];
+    run.counts.orphansB = clampNonNegative(run.counts.orphansB - 1);
+  }
+
+  run.counts.matches = clampNonNegative(run.counts.matches + 1);
+  breaksByRunId.set(runId, list);
+  return br;
+}

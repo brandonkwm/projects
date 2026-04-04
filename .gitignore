@@ -1,0 +1,13 @@
+# Tourguide apps live in a separate private repo (outside this tree).
+tourguide/
+tourguide-mobile/
+
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/.venv/
+**/__pycache__/
+*.pyc
+.env
+.env.local
