@@ -16,6 +16,8 @@ import {
   saveWorkflow,
   deleteWorkflow,
 } from './lib/workflowStorage';
+import { recordWorkflowAudit } from './lib/workflowAudit';
+import { getCurrentUser, setCurrentUser } from './lib/userContext';
 import {
   getAllCaseTemplates,
   getCaseTemplateById,
@@ -41,6 +43,7 @@ function App() {
   const [caseInstances, setCaseInstances] = useState(() => getAllCaseInstances());
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [traceCaseId, setTraceCaseId] = useState(null);
+  const [actorDisplayName, setActorDisplayName] = useState(() => getCurrentUser().displayName);
 
   const refreshWorkflows = useCallback(() => {
     setWorkflows(getAllWorkflows());
@@ -71,6 +74,13 @@ function App() {
   }, []);
 
   const handleSave = useCallback((workflow) => {
+    const previous = getWorkflowById(workflow.id);
+    recordWorkflowAudit({
+      workflowId: workflow.id,
+      beforeWorkflow: previous ?? null,
+      afterWorkflow: workflow,
+      source: 'save',
+    });
     saveWorkflow(workflow);
     refreshWorkflows();
     setView('list');
@@ -282,7 +292,37 @@ function App() {
           flexShrink: 0,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700 }}>Ops Portal – Designer</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>Ops Portal – Designer</div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 12,
+              color: '#4b5563',
+            }}
+          >
+            <span style={{ whiteSpace: 'nowrap' }}>Signed in as</span>
+            <input
+              type="text"
+              value={actorDisplayName}
+              onChange={(e) => setActorDisplayName(e.target.value)}
+              onBlur={() => {
+                const u = getCurrentUser();
+                setCurrentUser({ ...u, displayName: actorDisplayName });
+              }}
+              placeholder="Your name (audit trail)"
+              style={{
+                padding: '4px 8px',
+                fontSize: 12,
+                borderRadius: 6,
+                border: '1px solid #d1d5db',
+                minWidth: 140,
+              }}
+            />
+          </label>
+        </div>
         <nav style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"

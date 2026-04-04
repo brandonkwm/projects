@@ -14,6 +14,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { slugFromName, uniqueWorkflowId } from '../lib/workflowStorage';
+import WorkflowAuditModal from './WorkflowAuditModal';
+import { validateTaskLabels } from '../lib/workflowValidation';
 
 // Palette shown on the left-hand side
 const nodeTypesPalette = [
@@ -317,7 +319,14 @@ function WorkflowCanvas({
       }
   );
   const workflowId = initialWorkflow?.id ?? null;
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [saveBlockingMessages, setSaveBlockingMessages] = useState([]);
   const { project } = useReactFlow();
+
+  const auditWorkflowId = useMemo(() => {
+    const name = (workflowName || 'Unnamed').trim();
+    return workflowId || uniqueWorkflowId(slugFromName(name));
+  }, [workflowId, workflowName]);
 
   // Default edge appearance: smooth, animated with arrowheads.
   const defaultEdgeOptions = useMemo(
@@ -337,6 +346,12 @@ function WorkflowCanvas({
     () => nodes.find((n) => n.id === selectedNodeId) || null,
     [nodes, selectedNodeId]
   );
+
+  const taskLabelWarningsForSelection = useMemo(() => {
+    if (!selectedNode || selectedNode.type !== 'task') return [];
+    const { errors } = validateTaskLabels(nodes);
+    return errors.filter((e) => e.nodeId === selectedNode.id);
+  }, [nodes, selectedNode]);
 
   const selectedCaseTemplate = useMemo(() => {
     if (!selectedNode) return null;
@@ -401,10 +416,17 @@ function WorkflowCanvas({
       });
 
       const paletteItem = nodeTypesPalette.find((n) => n.type === type);
-      const label = paletteItem?.label || type;
+      const newId = getId();
+      const taskNum = nodes.filter((n) => n.type === 'task').length;
+      const label =
+        type === 'task'
+          ? taskNum === 0
+            ? 'Task'
+            : `Task ${taskNum + 1}`
+          : paletteItem?.label || type;
 
       const newNode = {
-        id: getId(),
+        id: newId,
         type,
         position,
         data: {
@@ -430,7 +452,7 @@ function WorkflowCanvas({
       setNodes((nds) => nds.concat(newNode));
       setSelectedNodeId(newNode.id);
     },
-    [project, setNodes]
+    [project, setNodes, nodes]
   );
 
   const handleNodeFieldChange = useCallback(
@@ -622,12 +644,10 @@ function WorkflowCanvas({
     [selectedNodeId, setNodes]
   );
 
-  const saveWorkflow = useCallback(() => {
+  const buildWorkflowPayload = useCallback(() => {
     const name = (workflowName || 'Unnamed').trim();
-    const id =
-      workflowId ||
-      uniqueWorkflowId(slugFromName(name));
-    const payload = {
+    const id = workflowId || uniqueWorkflowId(slugFromName(name));
+    return {
       id,
       name,
       description: workflowDescription.trim() || undefined,
@@ -650,7 +670,6 @@ function WorkflowCanvas({
         })),
       },
     };
-    onSave?.(payload);
   }, [
     nodes,
     edges,
@@ -658,8 +677,19 @@ function WorkflowCanvas({
     workflowDescription,
     requestBodyDescription,
     workflowId,
-    onSave,
+    entryConfig,
   ]);
+
+  const saveWorkflow = useCallback(() => {
+    const payload = buildWorkflowPayload();
+    const { ok, errors } = validateTaskLabels(payload.definition.nodes);
+    if (!ok) {
+      setSaveBlockingMessages(errors.map((e) => `${e.message} (node id: ${e.nodeId})`));
+      return;
+    }
+    setSaveBlockingMessages([]);
+    onSave?.(payload);
+  }, [onSave, buildWorkflowPayload]);
 
   const displayId = workflowId || (workflowName.trim() ? uniqueWorkflowId(slugFromName(workflowName)) : '—');
 
@@ -711,6 +741,22 @@ function WorkflowCanvas({
         <div style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>
           ID: {displayId}
         </div>
+        <button
+          type="button"
+          onClick={() => setAuditModalOpen(true)}
+          style={{
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 600,
+            borderRadius: 8,
+            border: '1px solid #d1d5db',
+            background: '#f9fafb',
+            color: '#374151',
+            cursor: 'pointer',
+          }}
+        >
+          Audit log
+        </button>
         {onSave && (
           <button
             type="button"
@@ -730,6 +776,31 @@ function WorkflowCanvas({
           </button>
         )}
       </div>
+
+      {saveBlockingMessages.length > 0 && (
+        <div
+          style={{
+            padding: '10px 16px',
+            borderBottom: '1px solid #e5e7eb',
+            background: '#fef2f2',
+            fontSize: 12,
+            color: '#991b1b',
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Fix before saving</div>
+          {saveBlockingMessages.map((msg, i) => (
+            <div key={i} style={{ marginBottom: 4, lineHeight: 1.45 }}>
+              {msg}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <WorkflowAuditModal
+        workflowId={auditWorkflowId}
+        open={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+      />
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 16 }}>
         {/* Palette / toolbox */}
@@ -776,8 +847,8 @@ function WorkflowCanvas({
               color: '#1e40af',
             }}
           >
-            Workflows can be triggered via HTTP API, email ingestion, or on a schedule. Tasks and decisions process a JSON
-            payload; a task can lead to another decision.
+            Select the <strong>Start</strong> node to configure entry channels (HTTP, email, schedule). Tasks and decisions
+            process a JSON payload; a task can lead to another decision.
           </div>
         </div>
 
@@ -836,9 +907,32 @@ function WorkflowCanvas({
                 fontSize: 13,
                 borderRadius: 6,
                 border: '1px solid #d1d5db',
-                marginBottom: 8,
+                marginBottom: 4,
               }}
             />
+            {selectedNode.type === 'task' && (
+              <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 6, lineHeight: 1.35 }}>
+                Use a short <strong>unique</strong> label (shown on the canvas). The audit log groups changes under this
+                name.
+              </div>
+            )}
+            {taskLabelWarningsForSelection.length > 0 && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: '#b45309',
+                  marginBottom: 8,
+                  padding: 6,
+                  background: '#fffbeb',
+                  borderRadius: 6,
+                  border: '1px solid #fde68a',
+                }}
+              >
+                {taskLabelWarningsForSelection.map((e, i) => (
+                  <div key={i}>{e.message}</div>
+                ))}
+              </div>
+            )}
 
             <label style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Description</label>
             <textarea
@@ -1432,11 +1526,9 @@ function WorkflowCanvas({
                     {/* Fetch mode */}
                     {(selectedNode.data?.actionConfig?.dataMode || 'fetch') === 'fetch' && (
                       <>
-                        <label style={{ fontSize: 11, fontWeight: 500 }}>Endpoint URL</label>
-                        <input
-                          type="text"
-                          placeholder="https://api.internal/read"
-                          value={selectedNode.data?.actionConfig?.fetchUrl || ''}
+                        <label style={{ fontSize: 11, fontWeight: 500 }}>Fetch via</label>
+                        <select
+                          value={selectedNode.data?.actionConfig?.dataFetchSource || 'http'}
                           onChange={(e) =>
                             setNodes((nds) =>
                               nds.map((node) =>
@@ -1447,7 +1539,59 @@ function WorkflowCanvas({
                                         ...node.data,
                                         actionConfig: {
                                           ...(node.data?.actionConfig || {}),
-                                          fetchUrl: e.target.value,
+                                          dataFetchSource: e.target.value,
+                                        },
+                                      },
+                                    }
+                                  : node
+                              )
+                            )
+                          }
+                          style={{
+                            fontSize: 12,
+                            padding: '4px 6px',
+                            borderRadius: 6,
+                            border: '1px solid #d1d5db',
+                            marginBottom: 4,
+                          }}
+                        >
+                          <option value="http">HTTP endpoint</option>
+                          <option value="sqlApi">SQL API (POST JSON)</option>
+                        </select>
+
+                        <label style={{ fontSize: 11, fontWeight: 500 }}>Fetch request timeout (seconds)</label>
+                        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                          Max time the workflow engine should wait on this step: <strong>GET/POST to HTTP endpoint</strong> or{' '}
+                          <strong>POST to SQL API</strong>. Empty = engine default. Separate from any <code style={{ fontSize: 9 }}>timeout</code>{' '}
+                          field inside optional SQL body JSON (that is defined by your SQL provider).
+                        </div>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="e.g. 90"
+                          value={(() => {
+                            const ac = selectedNode.data?.actionConfig;
+                            if (typeof ac?.dataFetchTimeoutSeconds === 'number') {
+                              return String(ac.dataFetchTimeoutSeconds);
+                            }
+                            if (typeof ac?.sqlClientTimeoutSeconds === 'number') {
+                              return String(ac.sqlClientTimeoutSeconds);
+                            }
+                            return '';
+                          })()}
+                          onChange={(e) =>
+                            setNodes((nds) =>
+                              nds.map((node) =>
+                                node.id === selectedNode.id && node.type === 'task'
+                                  ? {
+                                      ...node,
+                                      data: {
+                                        ...node.data,
+                                        actionConfig: {
+                                          ...(node.data?.actionConfig || {}),
+                                          dataFetchTimeoutSeconds:
+                                            e.target.value === '' ? undefined : Number(e.target.value),
                                         },
                                       },
                                     }
@@ -1463,37 +1607,921 @@ function WorkflowCanvas({
                             marginBottom: 4,
                           }}
                         />
-                        <label style={{ fontSize: 11, fontWeight: 500 }}>HTTP method</label>
-                        <select
-                          value={selectedNode.data?.actionConfig?.fetchMethod || 'GET'}
-                          onChange={(e) =>
-                            setNodes((nds) =>
-                              nds.map((node) =>
-                                node.id === selectedNode.id && node.type === 'task'
-                                  ? {
-                                      ...node,
-                                      data: {
-                                        ...node.data,
-                                        actionConfig: {
-                                          ...(node.data?.actionConfig || {}),
-                                          fetchMethod: e.target.value,
-                                        },
-                                      },
+
+                        {(!selectedNode.data?.actionConfig?.dataFetchSource ||
+                          selectedNode.data?.actionConfig?.dataFetchSource === 'http') && (
+                          <>
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>Endpoint URL</label>
+                            <input
+                              type="text"
+                              placeholder="https://api.internal/read"
+                              value={selectedNode.data?.actionConfig?.fetchUrl || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              fetchUrl: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                marginBottom: 4,
+                              }}
+                            />
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>HTTP method</label>
+                            <select
+                              value={selectedNode.data?.actionConfig?.fetchMethod || 'GET'}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              fetchMethod: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                              }}
+                            >
+                              <option value="GET">GET</option>
+                              <option value="POST">POST</option>
+                            </select>
+                          </>
+                        )}
+
+                        {selectedNode.data?.actionConfig?.dataFetchSource === 'sqlApi' && (
+                          <>
+                            <div style={{ fontSize: 10, color: '#1e40af', lineHeight: 1.35 }}>
+                              Sends a <strong>POST</strong> with <code style={{ fontSize: 9 }}>Content-Type: application/json</code>.
+                              The SQL is sent as <code style={{ fontSize: 9 }}>statement</code> in the body. Optional JSON below is
+                              merged into the same object (e.g. warehouse, database, schema, role, bindings, or any fields your API
+                              expects).
+                            </div>
+                            <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4, marginTop: 4 }}>
+                              <strong>Timeout:</strong> A <code style={{ fontSize: 9 }}>timeout</code> (or similar) key inside optional
+                              JSON is passed to your SQL API only—meaning depends on that service. Use <strong>Fetch request timeout</strong>{' '}
+                              above for the engine&apos;s HTTP client max wait.
+                            </div>
+                            <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.45, marginTop: 4 }}>
+                              <strong>Expected response (JSON):</strong> Many SQL-over-HTTP APIs return a wrapper object with status
+                              fields plus a <code style={{ fontSize: 9 }}>data</code> object that holds result metadata and row
+                              values. Your provider may use slightly different names, but a common shape looks like this:
+                            </div>
+                            <pre
+                              style={{
+                                margin: '6px 0 0',
+                                padding: 8,
+                                fontSize: 9,
+                                lineHeight: 1.35,
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: 6,
+                                overflow: 'auto',
+                                fontFamily: 'ui-monospace, monospace',
+                                color: '#334155',
+                              }}
+                            >
+{`{
+  "code": "000000",
+  "message": "Statement executed successfully",
+  "statementHandle": "…",
+  "data": {
+    "columns": [
+      { "name": "ID", "type": "TEXT" },
+      { "name": "NAME", "type": "TEXT" }
+    ],
+    "rows": [
+      ["1", "John Doe"],
+      ["2", "Jane Smith"]
+    ]
+  },
+  "responseTime": 15
+}`}
+                            </pre>
+                            <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.45, marginTop: 6 }}>
+                              <strong>Providers differ:</strong> each warehouse / SQL API may use different property names and nesting.
+                              Use <strong>Response shape</strong> below to point the engine at your <code style={{ fontSize: 9 }}>columns</code> /{' '}
+                              <code style={{ fontSize: 9 }}>rows</code> (and optional status fields). Use <strong>Execution</strong> to say
+                              whether the POST returns the final result or a job handle for polling or a callback.
+                            </div>
+                            <label style={{ fontSize: 11, fontWeight: 500, marginTop: 6 }}>POST URL</label>
+                            <input
+                              type="text"
+                              placeholder="https://api.internal/v1/sql/statements"
+                              value={
+                                selectedNode.data?.actionConfig?.sqlApiPostUrl ||
+                                selectedNode.data?.actionConfig?.sqlApiBaseUrl ||
+                                ''
+                              }
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              sqlApiPostUrl: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                marginBottom: 4,
+                              }}
+                            />
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>Statement (SQL)</label>
+                            <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                              Becomes the <code style={{ fontSize: 9 }}>statement</code> field in the JSON body (overrides the same
+                              key if present in optional JSON).
+                            </div>
+                            <textarea
+                              rows={5}
+                              placeholder={'SELECT * FROM sales_data WHERE region = ?'}
+                              value={selectedNode.data?.actionConfig?.sqlQuery || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              sqlQuery: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 11,
+                                fontFamily: 'ui-monospace, monospace',
+                                padding: '6px 8px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                resize: 'vertical',
+                              }}
+                            />
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>Optional body context (JSON)</label>
+                            <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                              Omit <code style={{ fontSize: 9 }}>statement</code> here; it is taken from the field above. Invalid JSON
+                              is stored as-is for the engine to validate.
+                            </div>
+                            <textarea
+                              rows={8}
+                              placeholder={`{\n  "warehouse": "ANALYTICS_WH",\n  "database": "APP_DB",\n  "schema": "PUBLIC",\n  "timeout": 60,\n  "bindings": {\n    "1": { "type": "TEXT", "value": "example" }\n  }\n}`}
+                              value={selectedNode.data?.actionConfig?.sqlApiBodyContextJson || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              sqlApiBodyContextJson: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 10,
+                                fontFamily: 'ui-monospace, monospace',
+                                padding: '6px 8px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                                resize: 'vertical',
+                              }}
+                            />
+
+                            <div
+                              style={{
+                                marginTop: 10,
+                                paddingTop: 10,
+                                borderTop: '1px solid #bfdbfe',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                              }}
+                            >
+                              <div style={{ fontSize: 11, fontWeight: 600, color: '#1e3a8a' }}>Execution</div>
+                              <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>
+                                Whether the SQL API returns the full result in the first POST response, or accepts the statement and
+                                finishes later (poll or inbound webhook).
+                              </div>
+                              <label style={{ fontSize: 11, fontWeight: 500 }}>API handling</label>
+                              <select
+                                value={selectedNode.data?.actionConfig?.sqlExecutionMode || 'sync'}
+                                onChange={(e) =>
+                                  setNodes((nds) =>
+                                    nds.map((node) =>
+                                      node.id === selectedNode.id && node.type === 'task'
+                                        ? {
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              actionConfig: {
+                                                ...(node.data?.actionConfig || {}),
+                                                sqlExecutionMode: e.target.value,
+                                              },
+                                            },
+                                          }
+                                        : node
+                                    )
+                                  )
+                                }
+                                style={{
+                                  fontSize: 12,
+                                  padding: '4px 6px',
+                                  borderRadius: 6,
+                                  border: '1px solid #d1d5db',
+                                }}
+                              >
+                                <option value="sync">Synchronous — result (or error) in POST response body</option>
+                                <option value="async">Asynchronous — POST returns a handle; complete via poll or callback</option>
+                              </select>
+
+                              {(selectedNode.data?.actionConfig?.sqlExecutionMode || 'sync') === 'async' && (
+                                <>
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Async completion</label>
+                                  <select
+                                    value={selectedNode.data?.actionConfig?.sqlAsyncCompletion || 'poll'}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlAsyncCompletion: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
                                     }
-                                  : node
-                              )
-                            )
-                          }
-                          style={{
-                            fontSize: 12,
-                            padding: '4px 6px',
-                            borderRadius: 6,
-                            border: '1px solid #d1d5db',
-                          }}
-                        >
-                          <option value="GET">GET</option>
-                          <option value="POST">POST</option>
-                        </select>
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  >
+                                    <option value="poll">Poll — engine calls a status URL until the result is ready</option>
+                                    <option value="callback">
+                                      Callback — provider invokes your webhook; engine resumes when notified
+                                    </option>
+                                  </select>
+
+                                  {(selectedNode.data?.actionConfig?.sqlAsyncCompletion || 'poll') === 'poll' && (
+                                    <>
+                                      <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>
+                                        Use <code style={{ fontSize: 9 }}>{'{{handle}}'}</code> in the URL where the submit response
+                                        places the job / statement id (see <strong>Job handle path</strong> below).
+                                      </div>
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Poll URL template</label>
+                                      <input
+                                        type="text"
+                                        placeholder="https://api.internal/v1/jobs/{{handle}}/result"
+                                        value={selectedNode.data?.actionConfig?.sqlPollUrlTemplate || ''}
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlPollUrlTemplate: e.target.value,
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 12,
+                                          padding: '4px 6px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                        }}
+                                      />
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Poll HTTP method</label>
+                                      <select
+                                        value={selectedNode.data?.actionConfig?.sqlPollMethod || 'GET'}
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlPollMethod: e.target.value,
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 12,
+                                          padding: '4px 6px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                        }}
+                                      >
+                                        <option value="GET">GET</option>
+                                        <option value="POST">POST</option>
+                                      </select>
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Poll interval (seconds)</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        placeholder="e.g. 2"
+                                        value={
+                                          typeof selectedNode.data?.actionConfig?.sqlPollIntervalSeconds === 'number'
+                                            ? String(selectedNode.data.actionConfig.sqlPollIntervalSeconds)
+                                            : ''
+                                        }
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlPollIntervalSeconds:
+                                                          e.target.value === '' ? undefined : Number(e.target.value),
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 12,
+                                          padding: '4px 6px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          marginTop: 8,
+                                          paddingTop: 8,
+                                          borderTop: '1px dashed #cbd5e1',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: 6,
+                                        }}
+                                      >
+                                        <div style={{ fontSize: 11, fontWeight: 600, color: '#334155' }}>When to stop polling</div>
+                                        <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.45 }}>
+                                          After each poll, the engine reads a <strong>dot path</strong> on the JSON body. If you list
+                                          <strong>done values</strong>, polling stops when the value at that path equals <em>any</em>{' '}
+                                          of them. If you leave values empty, polling stops when that path <strong>exists</strong>{' '}
+                                          and is not null. If the condition is not met, it keeps polling until{' '}
+                                          <strong>max wait</strong> below (then times out). If <strong>done path</strong> is empty, the
+                                          executor may fall back to its own rule (e.g. result rows present).
+                                        </div>
+                                        <label style={{ fontSize: 11, fontWeight: 500 }}>Done path (poll response)</label>
+                                        <input
+                                          type="text"
+                                          placeholder="e.g. status or data.state"
+                                          value={selectedNode.data?.actionConfig?.sqlPollDonePath || ''}
+                                          onChange={(e) =>
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id && node.type === 'task'
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                        actionConfig: {
+                                                          ...(node.data?.actionConfig || {}),
+                                                          sqlPollDonePath: e.target.value,
+                                                        },
+                                                      },
+                                                    }
+                                                  : node
+                                              )
+                                            )
+                                          }
+                                          style={{
+                                            fontSize: 12,
+                                            padding: '4px 6px',
+                                            borderRadius: 6,
+                                            border: '1px solid #d1d5db',
+                                          }}
+                                        />
+                                        <label style={{ fontSize: 11, fontWeight: 500 }}>Done values (optional)</label>
+                                        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                                          One per line or comma-separated. Compared as strings to the value at the done path. Empty
+                                          = stop when path exists only.
+                                        </div>
+                                        <textarea
+                                          rows={3}
+                                          placeholder={'SUCCEEDED\nCOMPLETE\n000000'}
+                                          value={selectedNode.data?.actionConfig?.sqlPollDoneValues || ''}
+                                          onChange={(e) =>
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id && node.type === 'task'
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                        actionConfig: {
+                                                          ...(node.data?.actionConfig || {}),
+                                                          sqlPollDoneValues: e.target.value,
+                                                        },
+                                                      },
+                                                    }
+                                                  : node
+                                              )
+                                            )
+                                          }
+                                          style={{
+                                            fontSize: 11,
+                                            fontFamily: 'ui-monospace, monospace',
+                                            padding: '6px 8px',
+                                            borderRadius: 6,
+                                            border: '1px solid #d1d5db',
+                                            resize: 'vertical',
+                                          }}
+                                        />
+                                      </div>
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Poll max wait (seconds)</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        placeholder="e.g. 300"
+                                        value={
+                                          typeof selectedNode.data?.actionConfig?.sqlPollMaxWaitSeconds === 'number'
+                                            ? String(selectedNode.data.actionConfig.sqlPollMaxWaitSeconds)
+                                            : ''
+                                        }
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlPollMaxWaitSeconds:
+                                                          e.target.value === '' ? undefined : Number(e.target.value),
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 12,
+                                          padding: '4px 6px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                        }}
+                                      />
+                                    </>
+                                  )}
+
+                                  {(selectedNode.data?.actionConfig?.sqlAsyncCompletion || 'poll') === 'callback' && (
+                                    <>
+                                      <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>
+                                        Register a <strong>public HTTPS URL</strong> with your provider so they POST back when the
+                                        statement completes. The ops runtime must match inbound events to this workflow run (e.g.
+                                        correlation id).
+                                      </div>
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Callback / webhook URL (yours)</label>
+                                      <input
+                                        type="text"
+                                        placeholder="https://ops.example.com/hooks/sql-result"
+                                        value={selectedNode.data?.actionConfig?.sqlCallbackWebhookUrl || ''}
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlCallbackWebhookUrl: e.target.value,
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 12,
+                                          padding: '4px 6px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                        }}
+                                      />
+                                      <label style={{ fontSize: 11, fontWeight: 500 }}>Correlation notes (JSON paths, headers)</label>
+                                      <textarea
+                                        rows={3}
+                                        placeholder={
+                                          'e.g. Send payload.correlationId in submit body; provider echoes it in callback JSON at body.runId'
+                                        }
+                                        value={selectedNode.data?.actionConfig?.sqlCallbackNotes || ''}
+                                        onChange={(e) =>
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id && node.type === 'task'
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      actionConfig: {
+                                                        ...(node.data?.actionConfig || {}),
+                                                        sqlCallbackNotes: e.target.value,
+                                                      },
+                                                    },
+                                                  }
+                                                : node
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          fontSize: 11,
+                                          padding: '6px 8px',
+                                          borderRadius: 6,
+                                          border: '1px solid #d1d5db',
+                                          resize: 'vertical',
+                                        }}
+                                      />
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                marginTop: 10,
+                                paddingTop: 10,
+                                borderTop: '1px solid #bfdbfe',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                              }}
+                            >
+                              <div style={{ fontSize: 11, fontWeight: 600, color: '#1e3a8a' }}>Response shape (dot paths)</div>
+                              <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>
+                                Paths are from the <strong>root of each JSON response</strong> (submit, and each poll if async).
+                                Use <strong>Custom</strong> when your warehouse nests columns/rows differently.
+                              </div>
+                              <label style={{ fontSize: 11, fontWeight: 500 }}>Layout</label>
+                              <select
+                                value={selectedNode.data?.actionConfig?.sqlResponseLayout || 'convention'}
+                                onChange={(e) =>
+                                  setNodes((nds) =>
+                                    nds.map((node) =>
+                                      node.id === selectedNode.id && node.type === 'task'
+                                        ? {
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              actionConfig: {
+                                                ...(node.data?.actionConfig || {}),
+                                                sqlResponseLayout: e.target.value,
+                                              },
+                                            },
+                                          }
+                                        : node
+                                    )
+                                  )
+                                }
+                                style={{
+                                  fontSize: 12,
+                                  padding: '4px 6px',
+                                  borderRadius: 6,
+                                  border: '1px solid #d1d5db',
+                                }}
+                              >
+                                <option value="convention">Common convention (default paths)</option>
+                                <option value="custom">Custom dot paths</option>
+                              </select>
+                              {(selectedNode.data?.actionConfig?.sqlResponseLayout || 'convention') === 'convention' && (
+                                <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.45, marginTop: 2 }}>
+                                  Uses <code style={{ fontSize: 9 }}>data.columns</code>, <code style={{ fontSize: 9 }}>data.rows</code>,{' '}
+                                  <code style={{ fontSize: 9 }}>code</code>, <code style={{ fontSize: 9 }}>message</code>, and (for
+                                  async) handle at <code style={{ fontSize: 9 }}>statementHandle</code> unless you override the job
+                                  handle path below.
+                                </div>
+                              )}
+                              {(selectedNode.data?.actionConfig?.sqlResponseLayout || 'convention') === 'custom' && (
+                                <>
+                                  <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.45, marginTop: 2 }}>
+                                    Set columns/rows/status paths yourself — needed when your warehouse nests JSON differently.
+                                  </div>
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Columns array path</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. data.columns or result.meta.schema"
+                                    value={selectedNode.data?.actionConfig?.sqlPathColumns || ''}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlPathColumns: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Rows array path</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. data.rows or result.data"
+                                    value={selectedNode.data?.actionConfig?.sqlPathRows || ''}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlPathRows: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Status / success code path (optional)</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. code or status"
+                                    value={selectedNode.data?.actionConfig?.sqlPathStatusCode || ''}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlPathStatusCode: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Success code value (optional)</label>
+                                  <input
+                                    type="text"
+                                    placeholder='e.g. 000000 or "OK"'
+                                    value={
+                                      selectedNode.data?.actionConfig?.sqlPathStatusOkValue != null
+                                        ? String(selectedNode.data.actionConfig.sqlPathStatusOkValue)
+                                        : ''
+                                    }
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlPathStatusOkValue: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Human message path (optional)</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. message or error.detail"
+                                    value={selectedNode.data?.actionConfig?.sqlPathMessage || ''}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlPathMessage: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                </>
+                              )}
+
+                              {(selectedNode.data?.actionConfig?.sqlExecutionMode || 'sync') === 'async' && (
+                                <>
+                                  <label style={{ fontSize: 11, fontWeight: 500 }}>Job handle path (submit response)</label>
+                                  <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                                    Dot path to the id returned by POST (used for poll URL{' '}
+                                    <code style={{ fontSize: 9 }}>{'{{handle}}'}</code> or to correlate callbacks). Convention
+                                    default is <code style={{ fontSize: 9 }}>statementHandle</code> if left empty.
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="statementHandle or data.jobId"
+                                    value={selectedNode.data?.actionConfig?.sqlJobHandlePath || ''}
+                                    onChange={(e) =>
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id && node.type === 'task'
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  actionConfig: {
+                                                    ...(node.data?.actionConfig || {}),
+                                                    sqlJobHandlePath: e.target.value,
+                                                  },
+                                                },
+                                              }
+                                            : node
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: 12,
+                                      padding: '4px 6px',
+                                      borderRadius: 6,
+                                      border: '1px solid #d1d5db',
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </div>
+
+                            <label style={{ fontSize: 11, fontWeight: 500 }}>Merge response JSON into payload path</label>
+                            <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
+                              Dot path where the <strong>final parsed result</strong> (tabular + metadata the engine normalizes) is
+                              attached on the workflow/case payload (e.g. <code style={{ fontSize: 9 }}>data.sql.customerRows</code>
+                              ). Empty = engine default. Async callback mode still merges here once the webhook is matched.
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="e.g. data.customerQuery"
+                              value={selectedNode.data?.actionConfig?.sqlResponsePayloadPath || ''}
+                              onChange={(e) =>
+                                setNodes((nds) =>
+                                  nds.map((node) =>
+                                    node.id === selectedNode.id && node.type === 'task'
+                                      ? {
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            actionConfig: {
+                                              ...(node.data?.actionConfig || {}),
+                                              sqlResponsePayloadPath: e.target.value,
+                                            },
+                                          },
+                                        }
+                                      : node
+                                  )
+                                )
+                              }
+                              style={{
+                                fontSize: 12,
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                border: '1px solid #d1d5db',
+                              }}
+                            />
+                          </>
+                        )}
                       </>
                     )}
 
@@ -2155,7 +3183,8 @@ function WorkflowCanvas({
           </div>
         )}
 
-        {/* Workflow-level: entry channels & triggers */}
+        {/* Entry channels & triggers — only on Start (workflow entry), not condition/task/end */}
+        {selectedNode?.type === 'start' && (
         <div
           style={{
             marginTop: 16,
@@ -2371,6 +3400,7 @@ function WorkflowCanvas({
             )}
           </div>
         </div>
+        )}
 
         {/* Workflow-level: request body note */}
         <div
