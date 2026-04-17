@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Singpass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    /* Phone frame */
+    .phone-wrap { min-height: 100vh; background: linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%); display:flex; align-items:center; justify-content:center; padding:2rem; }
+    .phone { width:390px; height:844px; border-radius:52px; border:10px solid #1c1c1e; background:#fff; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 0 0 2px #3a3a3c, 0 40px 120px rgba(0,0,0,0.7); position:relative; flex-shrink:0; }
+
+    /* Dynamic island */
+    .dynamic-island { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:126px; height:34px; background:#000; border-radius:20px; z-index:10; }
+
+    /* Status bar */
+    .status-bar { height:50px; background:white; display:flex; align-items:flex-end; justify-content:space-between; padding:0 28px 6px; flex-shrink:0; position:relative; z-index:9; }
+
+    /* Screen content */
+    .screen { flex:1; overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth; }
+    .screen::-webkit-scrollbar { display:none; }
+
+    /* Bottom nav */
+    .bottom-nav { height:80px; background:#fff; border-top:1px solid #f0f0f0; display:flex; align-items:flex-start; padding-top:8px; flex-shrink:0; }
+    .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; background:none; border:none; cursor:pointer; color:#9ca3af; transition:color 0.15s; }
+    .nav-btn.active { color:#E02020; }
+    .nav-btn svg { width:22px; height:22px; }
+    .nav-btn span { font-size:10px; font-weight:500; }
+
+    /* Singpass brand */
+    .sp-red { color: #E02020; }
+    .sp-bg-red { background: #E02020; }
+
+    /* Profile switcher banner */
+    .profile-banner { padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+    .profile-pill { display:flex; align-items:center; gap:8px; background:#f5f5f5; border-radius:20px; padding:6px 12px 6px 8px; }
+    .profile-avatar { width:28px; height:28px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; }
+
+    /* Card styles */
+    .app-card { background:white; border-radius:16px; border:1px solid #f0f0f0; padding:16px; margin:0 16px 12px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+    .section-title { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#9ca3af; padding:0 20px 8px; }
+
+    /* Insurance policy card */
+    .policy-card { background:#fafafa; border:1px solid #ebebeb; border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+
+    /* Delegated banner */
+    .delegate-header { background:linear-gradient(135deg,#92400e,#78350f); color:white; padding:14px 20px; margin-bottom:0; }
+
+    /* Scan tab */
+    .scan-viewfinder { width:220px; height:220px; border-radius:16px; position:relative; overflow:hidden; background:#000; margin:0 auto; }
+    .scan-corner { position:absolute; width:28px; height:28px; border-color:white; border-style:solid; }
+    .scan-line { position:absolute; left:0; right:0; height:2px; background:rgba(255,100,100,0.8); animation:scan 2s ease-in-out infinite; top:0; }
+    @keyframes scan { 0%,100%{top:10px;opacity:1} 50%{top:200px;opacity:0.8} }
+
+    /* Notification dot */
+    .notif-dot { width:8px; height:8px; background:#E02020; border-radius:4px; position:absolute; top:2px; right:2px; }
+
+    /* LPA status badges */
+    .badge-registered { background:#fef3c7; color:#92400e; font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:2px 8px; border-radius:12px; }
+    .badge-active     { background:#d1fae5; color:#065f46; font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:2px 8px; border-radius:12px; }
+    .badge-pending    { background:#e5e7eb; color:#6b7280; font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:2px 8px; border-radius:12px; }
+
+    /* Modal overlay */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; display:flex; align-items:flex-end; justify-content:center; }
+    .modal-sheet { background:white; border-radius:24px 24px 0 0; width:100%; max-width:390px; padding:20px; padding-bottom:40px; animation:slideUp 0.25s ease; }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+    /* Provider color chips */
+    .chip-AIA      { background:#e8f0fe; color:#1a56db; }
+    .chip-GE       { background:#fce8d9; color:#c2410c; }
+    .chip-INCOME   { background:#fef9c3; color:#854d0e; }
+    .chip-PRU      { background:#ede9fe; color:#6d28d9; }
+    .chip-AXA      { background:#fee2e2; color:#b91c1c; }
+    .chip-MANULIFE { background:#d1fae5; color:#065f46; }
+    .chip-SINGLIFE { background:#e0f2fe; color:#0369a1; }
+
+    /* Responsive: full screen on mobile */
+    @media (max-width:430px) {
+      .phone-wrap { padding:0; background:white; }
+      .phone { width:100vw; height:100dvh; border-radius:0; border:none; box-shadow:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="phone-wrap">
+  <div class="phone" id="phone">
+    <div class="dynamic-island"></div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span style="font-size:13px;font-weight:600" id="status-time">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <svg width="16" height="12" viewBox="0 0 16 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#000"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#000"/><rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#000"/><rect x="13.5" y="1" width="2.5" height="11" rx="1" fill="#ddd"/></svg>
+        <svg width="15" height="12" viewBox="0 0 15 12"><path d="M7.5 2.5 C9.5 0.5 12 0 14 1.5" stroke="#000" fill="none" stroke-width="1.5" stroke-linecap="round"/><path d="M7.5 2.5 C6 1 3.5 0.5 1 2" stroke="#000" fill="none" stroke-width="1.5" stroke-linecap="round"/><path d="M7.5 5 C8.8 3.8 10.5 3.5 12 4.5" stroke="#000" fill="none" stroke-width="1.5" stroke-linecap="round"/><path d="M7.5 5 C6.2 3.8 4.5 3.5 3 4.5" stroke="#000" fill="none" stroke-width="1.5" stroke-linecap="round"/><circle cx="7.5" cy="8" r="1.5" fill="#000"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="#000" stroke-width="1.2" fill="none"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="#000"/><rect x="1.5" y="2.5" width="17" height="7" rx="2" fill="#000"/></svg>
+      </div>
+    </div>
+
+    <!-- Screen content -->
+    <div class="screen" id="screen"></div>
+
+    <!-- Bottom nav -->
+    <div class="bottom-nav">
+      <button class="nav-btn active" id="nav-home" onclick="setTab('home')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-btn" id="nav-scan" onclick="setTab('scan')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0v8a1 1 0 001 1h8a1 1 0 001-1V8a1 1 0 00-1-1H6a1 1 0 00-1 1zm8-4H6v4h8V4z"/></svg>
+        <span>Scan</span>
+      </button>
+      <button class="nav-btn" id="nav-inbox" onclick="setTab('inbox')" style="position:relative">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <span>Inbox</span>
+        <div class="notif-dot" id="inbox-dot" style="display:none"></div>
+      </button>
+      <button class="nav-btn" id="nav-me" onclick="setTab('me')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span>Me</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal container -->
+<div id="modal" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal-sheet" id="modal-content"></div>
+</div>
+
+<script>
+// ─── State ─────────────────────────────────────────────────────────────────
+const S = {
+  me: null,
+  opg: null,
+  auditLog: [],
+  activeProfile: 'self', // 'self' or principalNric
+  currentTab: 'home',
+  scanProfile: 'self',   // profile selected on scan tab
+  hasNewNotif: false,
+};
+
+const fmt = n => new Intl.NumberFormat('en-SG',{style:'currency',currency:'SGD',maximumFractionDigits:0}).format(n);
+const fmtDate = s => new Date(s).toLocaleString('en-SG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const fmtDateShort = s => new Date(s).toLocaleString('en-SG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const initials = name => name.split(' ').map(w=>w[0]).slice(0,2).join('');
+
+// ─── Boot ───────────────────────────────────────────────────────────────────
+async function init() {
+  // Clock
+  const tick = () => { const n=new Date(); document.getElementById('status-time').textContent=n.getHours()+':'+(n.getMinutes()+'').padStart(2,'0'); };
+  tick(); setInterval(tick, 10000);
+
+  const [meRes, opgRes, logRes] = await Promise.all([
+    fetch('/api/me'), fetch('/api/opg/registry'), fetch('/api/audit-log'),
+  ]);
+
+  if (meRes.status === 401) { window.location = '/auth/login'; return; }
+
+  S.me       = await meRes.json();
+  S.opg      = await opgRes.json();
+  S.auditLog = await logRes.json();
+
+  // Check for new notifications (items since 24h ago)
+  const cutoff = Date.now() - 24*60*60*1000;
+  S.hasNewNotif = S.auditLog.some(e => new Date(e.timestamp) > cutoff);
+  if (S.hasNewNotif) document.getElementById('inbox-dot').style.display = 'block';
+
+  renderTab('home');
+}
+
+// ─── Tab routing ────────────────────────────────────────────────────────────
+function setTab(tab) {
+  S.currentTab = tab;
+  ['home','scan','inbox','me'].forEach(t => {
+    document.getElementById(`nav-${t}`)?.classList.toggle('active', t === tab);
+  });
+  if (tab === 'inbox') {
+    S.hasNewNotif = false;
+    document.getElementById('inbox-dot').style.display = 'none';
+  }
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  const screen = document.getElementById('screen');
+  screen.scrollTop = 0;
+  const fns = { home: renderHome, scan: renderScan, inbox: renderInbox, me: renderMe };
+  screen.innerHTML = fns[tab]?.() || '';
+}
+
+// ─── HOME tab ───────────────────────────────────────────────────────────────
+function renderHome() {
+  if (S.activeProfile !== 'self') return renderDelegatedHome();
+
+  const me = S.me;
+  const delegates = me.delegatedAuthorities || [];
+  const hasDelegates = delegates.length > 0;
+  const maskedNric = me.nric[0] + 'XXXX' + me.nric.slice(-4);
+
+  return `
+  <!-- Profile switcher -->
+  <div class="profile-banner" onclick="showProfileSwitcher()">
+    <div class="profile-pill">
+      <div class="profile-avatar sp-bg-red" style="font-size:11px">${initials(me.name)}</div>
+      <span style="font-size:13px;font-weight:600;color:#111">${me.name.split(' ')[0]}</span>
+      <svg width="14" height="14" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+    <svg width="22" height="22" fill="none" stroke="#E02020" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+  </div>
+
+  <!-- Identity card -->
+  <div style="background:linear-gradient(135deg,#E02020,#9b1919);border-radius:20px;margin:0 16px 16px;padding:20px;color:white;position:relative;overflow:hidden">
+    <div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;background:rgba(255,255,255,0.08);border-radius:50%"></div>
+    <div style="position:absolute;right:20px;bottom:-30px;width:80px;height:80px;background:rgba(255,255,255,0.05);border-radius:50%"></div>
+    <div style="font-size:11px;opacity:0.8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Singpass</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px">${me.name}</div>
+    <div style="font-size:13px;opacity:0.85">${maskedNric}</div>
+    ${me.age ? `<div style="font-size:12px;opacity:0.7;margin-top:4px">Age ${me.age}</div>` : ''}
+  </div>
+
+  <!-- Quick actions -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px;margin-bottom:20px">
+    ${quickAction('inbox','Inbox','M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',()=>setTab('inbox'))}
+    ${quickAction('scan','Scan','M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0v8a1 1 0 001 1h8a1 1 0 001-1V8a1 1 0 00-1-1H6a1 1 0 00-1 1zm8-4H6v4h8V4z',()=>setTab('scan'))}
+    ${quickAction('docs','Documents','M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',()=>{})}
+    ${quickAction('lpa','My LPA','M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',()=>setTab('me'))}
+  </div>
+
+  ${hasDelegates ? `
+  <div class="section-title">Delegated Authority</div>
+  ${delegates.map(d => `
+  <div class="app-card" style="border-left:4px solid #f59e0b;cursor:pointer" onclick="switchToDelegate('${d.principalNric}','${d.principalName}')">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;background:#fef3c7;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" fill="none" stroke="#92400e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${d.principalName}</div>
+        <div style="font-size:11px;color:#6b7280">${d.relationship} · ${d.basis}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="badge-active">Active</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:4px">Tap to switch →</div>
+      </div>
+    </div>
+  </div>`).join('')}` : ''}
+
+  <!-- My own insurance quick view -->
+  <div class="section-title" style="margin-top:8px">My Insurance (SGFinDex)</div>
+  <div class="app-card">
+    <div id="own-insurance-summary">
+      <div style="color:#9ca3af;font-size:13px">Loading…</div>
+    </div>
+  </div>`;
+}
+
+function quickAction(id, label, path, fn) {
+  return `<button onclick="(${fn})()" style="background:#f9fafb;border:1px solid #f0f0f0;border-radius:12px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+    <svg width="20" height="20" fill="none" stroke="#E02020" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="${path}"/></svg>
+    <span style="font-size:10px;color:#374151;font-weight:500">${label}</span>
+  </button>`;
+}
+
+async function loadOwnInsurance() {
+  try {
+    const res = await fetch(`/api/sgfindex/${S.me.nric}`);
+    const data = await res.json();
+    const el = document.getElementById('own-insurance-summary');
+    if (!el) return;
+    if (!data.policies?.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px">No policies found via SGFinDex</div>'; return; }
+    el.innerHTML = data.policies.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f9fafb">
+        <div>
+          <span class="chip-${p.providerCode}" style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;text-transform:uppercase">${p.providerCode}</span>
+          <span style="font-size:12px;color:#374151;margin-left:6px">${p.planName}</span>
+        </div>
+        <span style="font-size:11px;color:#6b7280">${fmt(p.annualPremium)}/yr</span>
+      </div>`).join('') + `<div style="font-size:10px;color:#9ca3af;padding-top:6px">Data from SGFinDex · ${data.policies.length} polic${data.policies.length>1?'ies':'y'}</div>`;
+  } catch(e) {}
+}
+
+// ─── DELEGATED HOME ──────────────────────────────────────────────────────────
+async function renderDelegatedHomeAsync() {
+  const principalNric = S.activeProfile;
+  try {
+    const [insRes, finRes] = await Promise.all([
+      fetch(`/api/sgfindex/${principalNric}`),
+      fetch(`/api/financial/${principalNric}`),
+    ]);
+    const ins = await insRes.json();
+    const fin = insRes.ok ? await (async()=>{ return await finRes.json() })() : null;
+    document.getElementById('delegated-home-content').innerHTML = renderDelegatedInsurance(ins, fin);
+  } catch(e) {
+    document.getElementById('delegated-home-content').innerHTML = '<div style="padding:16px;color:#ef4444;font-size:13px">Could not load data. LPA may not be activated.</div>';
+  }
+}
+
+function renderDelegatedHome() {
+  const d = S.me.delegatedAuthorities.find(a => a.principalNric === S.activeProfile);
+  const name = d?.principalName || S.activeProfile;
+
+  setTimeout(renderDelegatedHomeAsync, 0);
+
+  return `
+  <div class="delegate-header">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <button onclick="switchToDelegate('self')" style="background:rgba(255,255,255,0.2);border:none;border-radius:20px;color:white;padding:4px 10px;font-size:11px;cursor:pointer">← My Account</button>
+      <div class="profile-pill" style="background:rgba(255,255,255,0.15);cursor:pointer" onclick="showProfileSwitcher()">
+        <div style="width:22px;height:22px;background:rgba(255,255,255,0.3);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white">${initials(name)}</div>
+        <span style="font-size:12px;font-weight:600;color:white">${name}</span>
+        <svg width="12" height="12" fill="none" stroke="rgba(255,255,255,0.8)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+    <div style="font-size:11px;opacity:0.8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Delegated Authority</div>
+    <div style="font-size:15px;font-weight:700">${name}'s Insurance</div>
+    <div style="font-size:11px;opacity:0.75;margin-top:2px">${d?.relationship || ''} · ${d?.basis || ''}</div>
+  </div>
+  <div style="background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 20px;display:flex;align-items:center;gap:8px">
+    <svg width="14" height="14" fill="none" stroke="#92400e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    <span style="font-size:11px;color:#92400e;font-weight:500">View-only · You cannot make changes to these policies</span>
+  </div>
+  <div id="delegated-home-content" style="padding:0 0 16px">
+    <div style="padding:24px;text-align:center">
+      <div style="width:24px;height:24px;border:3px solid #fcd34d;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto"></div>
+    </div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+}
+
+function renderDelegatedInsurance(ins, fin) {
+  if (!ins.policies?.length) return '<div style="padding:16px;color:#9ca3af;font-size:13px">No SGFinDex data available.</div>';
+
+  const totalPremium = ins.policies.reduce((s,p)=>s+(p.annualPremium||0),0);
+
+  return `
+  <div style="padding:12px 16px 4px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px">SGFinDex Insurance Subscriptions</div>
+    ${ins.policies.map(p=>`
+    <div class="policy-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="chip-${p.providerCode}" style="font-size:9px;font-weight:800;padding:3px 8px;border-radius:8px;text-transform:uppercase">${p.provider.split(' ')[0]}</span>
+          <span style="background:${p.status==='Active'?'#d1fae5':'#fee2e2'};color:${p.status==='Active'?'#065f46':'#991b1b'};font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px">${p.status.toUpperCase()}</span>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:#111">${fmt(p.annualPremium)}<span style="font-size:10px;color:#9ca3af;font-weight:400">/yr</span></span>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:2px">${p.planName}</div>
+      <div style="font-size:11px;color:#6b7280">${p.policyType}${p.sumAssured?` · Sum: ${fmt(p.sumAssured)}`:''}</div>
+      ${p.riders?.length?`<div style="font-size:10px;color:#9ca3af;margin-top:4px">Riders: ${p.riders.join(', ')}</div>`:''}
+    </div>`).join('')}
+    <div style="background:#f9fafb;border-radius:10px;padding:10px 12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:#6b7280">${ins.policies.length} active polic${ins.policies.length>1?'ies':'y'} via SGFinDex</span>
+      <span style="font-size:13px;font-weight:700;color:#111">${fmt(totalPremium)}/yr total</span>
+    </div>
+    ${fin?.data?.cpf?`
+    <div style="background:#eff6ff;border-radius:10px;padding:10px 12px;margin-top:8px;border:1px solid #bfdbfe">
+      <div style="font-size:10px;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">MediSave Available</div>
+      <div style="font-size:16px;font-weight:700;color:#1e3a8a">${fmt(fin.data.cpf.ma)}</div>
+      <div style="font-size:10px;color:#3b82f6">Can be used to pay premiums for MediShield Life & Integrated Shield Plans</div>
+    </div>`:''}
+    <div style="font-size:10px;color:#9ca3af;padding:8px 0 0;text-align:center">Last updated via SGFinDex: ${ins.lastUpdated || 'N/A'}</div>
+  </div>`;
+}
+
+// ─── SCAN tab ────────────────────────────────────────────────────────────────
+function renderScan() {
+  const me = S.me;
+  const delegates = me.delegatedAuthorities || [];
+  const isSelf    = S.scanProfile === 'self';
+  const activePrincipal = !isSelf ? delegates.find(d => d.principalNric === S.scanProfile) : null;
+
+  return `
+  <div style="padding:16px 20px 8px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">Scan QR Code</div>
+
+    <!-- Profile selector tabs -->
+    <div style="background:#f3f4f6;border-radius:12px;padding:4px;display:flex;margin-bottom:16px">
+      <button onclick="setScanProfile('self')" style="flex:1;padding:8px;border-radius:9px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;${isSelf?'background:white;color:#E02020;box-shadow:0 1px 3px rgba(0,0,0,0.1)':'background:transparent;color:#6b7280'}">
+        Principal
+      </button>
+      <button onclick="setScanProfile('${delegates[0]?.principalNric||'none'}')" style="flex:1;padding:8px;border-radius:9px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;${!isSelf?'background:#fef3c7;color:#92400e;box-shadow:0 1px 3px rgba(0,0,0,0.1)':'background:transparent;color:#6b7280'}" ${!delegates.length?'disabled':''}>
+        ${delegates.length?'Delegated Authority':'No Delegation'}
+      </button>
+    </div>
+
+    <!-- Active profile indicator -->
+    <div style="background:${isSelf?'#fff1f2':'#fffbeb'};border:1px solid ${isSelf?'#fecdd3':'#fcd34d'};border-radius:10px;padding:8px 12px;margin-bottom:16px;font-size:11px;color:${isSelf?'#be123c':'#92400e'}">
+      ${isSelf
+        ? `<strong>Profile:</strong> Principal · ${me.name}`
+        : `<strong>Profile:</strong> Delegated Authority for ${activePrincipal?.principalName||'Unknown'} · ${activePrincipal?.basis||'LPA'}`}
+    </div>
+  </div>
+
+  <!-- Viewfinder -->
+  <div style="padding:0 20px 20px">
+    <div class="scan-viewfinder">
+      <div class="scan-line"></div>
+      <div class="scan-corner" style="top:12px;left:12px;border-width:3px 0 0 3px;border-radius:4px 0 0 0"></div>
+      <div class="scan-corner" style="top:12px;right:12px;border-width:3px 3px 0 0;border-radius:0 4px 0 0"></div>
+      <div class="scan-corner" style="bottom:12px;left:12px;border-width:0 0 3px 3px;border-radius:0 0 0 4px"></div>
+      <div class="scan-corner" style="bottom:12px;right:12px;border-width:0 3px 3px 0;border-radius:0 0 4px 0"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div style="width:80px;height:80px;border-radius:8px;overflow:hidden">
+          ${qrSvg()}
+        </div>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:8px">Point your camera at a QR code, or tap a service below</p>
+  </div>
+
+  <!-- Available services -->
+  <div class="section-title">Available Services</div>
+  <div style="padding:0 16px 24px">
+    ${spCard('cpf','CPF Online Services','#005B94',isSelf,'MediSave balance only','All CPF balances, contributions, income')}
+    ${spCard('insurer','Insurance Portal','#6B21A8',isSelf,'Active policies · sum insured · premiums','Full policy details via SGFinDex')}
+  </div>`;
+}
+
+function spCard(spId, name, color, isSelf, delegatedLabel, ownLabel) {
+  const disabled = !isSelf && !S.me.delegatedAuthorities?.length;
+  return `
+  <div style="background:white;border:1px solid #f0f0f0;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div style="width:40px;height:40px;background:${color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0v8a1 1 0 001 1h8a1 1 0 001-1V8a1 1 0 00-1-1H6a1 1 0 00-1 1zm8-4H6v4h8V4z"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${name}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:1px">${isSelf?ownLabel:delegatedLabel}</div>
+      </div>
+    </div>
+    <button onclick="simulateScan('${spId}')" ${disabled?'disabled':''} style="width:100%;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:${disabled?'not-allowed':'pointer'};background:${disabled?'#f9fafb':color};color:${disabled?'#9ca3af':'white'};transition:opacity 0.15s">
+      ${disabled ? 'No active delegation' : '↓ Tap to scan / login'}
+    </button>
+  </div>`;
+}
+
+function qrSvg() {
+  return `<svg viewBox="0 0 50 50" fill="white"><rect x="2" y="2" width="18" height="18" rx="2" fill="none" stroke="white" stroke-width="2"/><rect x="5" y="5" width="12" height="12" fill="white"/><rect x="30" y="2" width="18" height="18" rx="2" fill="none" stroke="white" stroke-width="2"/><rect x="33" y="5" width="12" height="12" fill="white"/><rect x="2" y="30" width="18" height="18" rx="2" fill="none" stroke="white" stroke-width="2"/><rect x="5" y="33" width="12" height="12" fill="white"/><rect x="30" y="30" width="4" height="4" fill="white"/><rect x="36" y="30" width="4" height="4" fill="white"/><rect x="42" y="30" width="6" height="6" fill="white"/><rect x="30" y="36" width="4" height="4" fill="white"/><rect x="36" y="38" width="4" height="4" fill="white"/><rect x="42" y="38" width="4" height="4" fill="white"/><rect x="30" y="44" width="6" height="4" fill="white"/><rect x="38" y="44" width="4" height="4" fill="white"/></svg>`;
+}
+
+function setScanProfile(principalNric) {
+  if (principalNric === 'none') return;
+  S.scanProfile = principalNric;
+  renderTab('scan');
+}
+
+async function simulateScan(spId) {
+  const isSelf        = S.scanProfile === 'self';
+  const principalNric = isSelf ? null : S.scanProfile;
+  const me            = S.me;
+  const d             = !isSelf ? me.delegatedAuthorities.find(a=>a.principalNric===principalNric) : null;
+
+  const spNames = { cpf:'CPF Online Services', insurer:'Insurance Portal (SGFinDex)' };
+  const scopeLabels = {
+    cpf: { own:'All CPF balances, income, housing', del:'MediSave balance only' },
+    insurer: { own:'Your insurance policies via SGFinDex', del:'Active policies · sum insured · premiums' },
+  };
+  const sl = scopeLabels[spId];
+
+  document.getElementById('modal-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:${spId==='cpf'?'#005B94':'#6B21A8'};border-radius:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px">
+        <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      </div>
+      <div style="font-size:16px;font-weight:700">${spNames[spId]}</div>
+    </div>
+    <div style="background:#f9fafb;border-radius:12px;padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Selected profile</div>
+      <div style="font-size:14px;font-weight:600;color:#111">${isSelf ? `Principal · ${me.name}` : `Delegated Authority · ${d?.principalName}`}</div>
+      ${!isSelf?`<div style="font-size:10px;color:#92400e;margin-top:4px;background:#fef3c7;padding:4px 8px;border-radius:6px;display:inline-block">Authorised actor: ${me.name} · ${d?.basis}</div>`:''}
+    </div>
+    <div style="background:#f0fdf4;border-radius:12px;padding:12px 14px;margin-bottom:20px">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Data you will access</div>
+      <div style="font-size:13px;font-weight:500;color:#166534">${isSelf?sl.own:sl.del}</div>
+    </div>
+    <button onclick="confirmScan('${spId}','${principalNric||''}')" style="width:100%;padding:14px;background:#E02020;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px">
+      Confirm & Login
+    </button>
+    <button onclick="closeModal()" style="width:100%;padding:12px;background:#f3f4f6;color:#374151;border:none;border-radius:14px;font-size:14px;font-weight:500;cursor:pointer">Cancel</button>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+async function confirmScan(spId, principalNric) {
+  document.querySelector('#modal-content button').textContent = 'Opening…';
+  document.querySelector('#modal-content button').disabled = true;
+
+  const res = await fetch('/api/sp-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spId, principalNric: principalNric||undefined }),
+  });
+
+  closeModal();
+
+  if (!res.ok) {
+    const err = await res.json();
+    alert('Access denied: ' + (err.error||'Unknown error'));
+    return;
+  }
+
+  const { spUrl } = await res.json();
+  window.open(spUrl, '_blank');
+
+  // Refresh audit log
+  const logRes = await fetch('/api/audit-log');
+  S.auditLog = await logRes.json();
+  S.hasNewNotif = true;
+  document.getElementById('inbox-dot').style.display = 'block';
+}
+
+// ─── INBOX tab ───────────────────────────────────────────────────────────────
+function renderInbox() {
+  if (!S.auditLog.length) return '<div style="padding:40px 20px;text-align:center;color:#9ca3af;font-size:13px">No activity yet.</div>';
+
+  const typeConfig = {
+    delegated_access: { icon:'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', bg:'#eff6ff', color:'#1d4ed8', label:'Delegated Access' },
+    lpa_activated:    { icon:'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg:'#f0fdf4', color:'#15803d', label:'LPA Activated' },
+    lpa_registered:   { icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', bg:'#fffbeb', color:'#92400e', label:'LPA Registered' },
+  };
+
+  const myNric = S.me.nric;
+
+  return `
+  <div style="padding:16px 20px 8px;font-size:16px;font-weight:700">Activity</div>
+  <div style="padding:0 16px 24px">
+  ${S.auditLog.map(e => {
+    const cfg = typeConfig[e.type] || typeConfig.delegated_access;
+    const isActor    = e.actorNric === myNric;
+    const isPrincipal = e.principalNric === myNric;
+    let message = '';
+    if (e.type === 'delegated_access') {
+      if (isActor)     message = `You accessed <strong>${e.serviceProvider}</strong> as delegate for <strong>${e.principalName}</strong>`;
+      if (isPrincipal && !isActor) message = `<strong>${e.actorName}</strong> accessed <strong>${e.serviceProvider}</strong> on your behalf`;
+    } else if (e.type === 'lpa_activated') {
+      if (isPrincipal) message = `Your LPA was activated by <strong>${e.actorName}</strong> — delegates can now act on your behalf`;
+      else message = `Your delegated authority for <strong>${e.principalName}</strong> is now active`;
+    } else if (e.type === 'lpa_registered') {
+      if (isActor)     message = `You registered an LPA with the Office of the Public Guardian`;
+      else message = `<strong>${e.principalName}</strong> registered you as a delegate with the OPG`;
+    }
+
+    return `
+    <div style="background:white;border:1px solid #f0f0f0;border-radius:14px;padding:14px;margin-bottom:8px">
+      <div style="display:flex;gap:12px">
+        <div style="width:36px;height:36px;background:${cfg.bg};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" fill="none" stroke="${cfg.color}" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${cfg.icon}"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;color:${cfg.color};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${cfg.label}</div>
+          <div style="font-size:12px;color:#374151;line-height:1.4">${message}</div>
+          ${e.scopesAccessed?.length?`<div style="font-size:10px;color:#6b7280;margin-top:4px">Scope: ${e.scopesAccessed.join(', ')}</div>`:''}
+          ${e.certificate?`<div style="font-size:10px;color:#6b7280;margin-top:2px">Dr: ${e.certificate.doctorName} · ${e.certificate.hospital}</div>`:''}
+          <div style="font-size:10px;color:#9ca3af;margin-top:4px">${fmtDate(e.timestamp)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}
+  </div>`;
+}
+
+// ─── ME tab ──────────────────────────────────────────────────────────────────
+function renderMe() {
+  const me = S.me;
+  const asDonor = S.opg.asDonor || [];
+  const asDonee = S.opg.asDonee || [];
+
+  const statusMap = { registered: 'Registered – awaiting activation', active: 'Active', revoked: 'Revoked', pending: 'Pending OPG processing' };
+
+  return `
+  <div style="padding:20px 20px 8px">
+    <!-- User card -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="width:56px;height:56px;background:#E02020;border-radius:28px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;flex-shrink:0">${initials(me.name)}</div>
+      <div>
+        <div style="font-size:17px;font-weight:700">${me.name}</div>
+        <div style="font-size:12px;color:#9ca3af">${me.nric[0] + 'XXXX' + me.nric.slice(-4)}</div>
+        <a href="/auth/logout" style="font-size:11px;color:#E02020;text-decoration:none;font-weight:500">Sign out</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- My LPAs (as donor) -->
+  <div class="section-title">My Lasting Power of Attorney</div>
+  ${asDonor.length ? asDonor.map(r => `
+  <div class="app-card">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:6px">Donee (acts for me)</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:14px;font-weight:600">${r.doneeName}</div>
+        <div style="font-size:11px;color:#6b7280">${r.relationship} · ${r.scope.replace(/_/g,' ')}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px">Registered ${new Date(r.registeredAt).toLocaleDateString('en-SG')}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="${r.status==='active'?'badge-active':r.status==='registered'?'badge-registered':'badge-pending'}">${r.status.toUpperCase()}</div>
+        ${r.status==='registered'?`<div style="font-size:9px;color:#92400e;margin-top:4px;max-width:100px;text-align:right">Awaiting doctor certificate</div>`:''}
+        ${r.certificate?`<div style="font-size:9px;color:#15803d;margin-top:4px;max-width:100px;text-align:right">Certified by ${r.certificate.doctorName}</div>`:''}
+      </div>
+    </div>
+  </div>`).join('') : '<div style="padding:0 16px 12px;font-size:12px;color:#9ca3af">No LPA registered. Nominate a delegate below.</div>'}
+
+  <!-- As donee -->
+  ${asDonee.length ? `
+  <div class="section-title" style="margin-top:8px">Delegated To Me</div>
+  ${asDonee.map(r=>`
+  <div class="app-card">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:6px">I act for</div>
+    <div style="display:flex;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:600">${r.donorName}</div>
+        <div style="font-size:11px;color:#6b7280">${r.relationship}</div>
+      </div>
+      <div class="${r.status==='active'?'badge-active':'badge-registered'}">${r.status.toUpperCase()}</div>
+    </div>
+  </div>`).join('')}` : ''}
+
+  <!-- Nominate form -->
+  <div class="section-title" style="margin-top:8px">Nominate a Delegate</div>
+  <div class="app-card">
+    <p style="font-size:11px;color:#6b7280;margin-bottom:12px;line-height:1.5">Pre-authorise someone to view your financial data if you lose capacity. This registers an LPA with the Office of the Public Guardian.</p>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Their Singpass NRIC</label>
+      <input id="nominate-nric" placeholder="e.g. S9912370B" maxlength="9" style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;outline:none;box-sizing:border-box" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Relationship</label>
+      <select id="nominate-rel" style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;outline:none;background:white;box-sizing:border-box">
+        <option>Child</option><option>Spouse</option><option>Sibling</option><option>Parent</option><option>Legal guardian</option>
+      </select>
+    </div>
+    <button onclick="nominateDelegate()" style="width:100%;padding:12px;background:#E02020;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+      Register LPA with OPG
+    </button>
+    <p id="nominate-msg" style="font-size:11px;margin-top:6px;display:none"></p>
+  </div>`;
+}
+
+async function nominateDelegate() {
+  const nric = document.getElementById('nominate-nric').value.trim().toUpperCase();
+  const rel  = document.getElementById('nominate-rel').value;
+  const msg  = document.getElementById('nominate-msg');
+
+  const res  = await fetch('/api/opg/nominate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ doneeNric: nric, relationship: rel }),
+  });
+  const data = await res.json();
+  msg.style.display = 'block';
+  if (res.ok) {
+    msg.style.color = '#15803d';
+    msg.textContent = `LPA registered with OPG for ${data.registration.doneeName||nric}. It will activate when a doctor certifies incapacity.`;
+    document.getElementById('nominate-nric').value = '';
+    // Refresh OPG data
+    const opgRes = await fetch('/api/opg/registry');
+    S.opg = await opgRes.json();
+  } else {
+    msg.style.color = '#dc2626';
+    msg.textContent = data.error || 'Something went wrong.';
+  }
+}
+
+// ─── Profile switcher ────────────────────────────────────────────────────────
+function showProfileSwitcher() {
+  const me        = S.me;
+  const delegates = me.delegatedAuthorities || [];
+
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px;padding:0 4px">Switch Profile</div>
+    <!-- Own account -->
+    <button onclick="switchToDelegate('self')" style="width:100%;background:${S.activeProfile==='self'?'#fff1f2':'#f9fafb'};border:${S.activeProfile==='self'?'2px solid #E02020':'1px solid #e5e7eb'};border-radius:14px;padding:14px;text-align:left;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;background:#E02020;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0">${initials(me.name)}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600">${me.name}</div>
+        <div style="font-size:11px;color:#6b7280">My Account</div>
+      </div>
+      ${S.activeProfile==='self'?'<svg style="margin-left:auto" width="18" height="18" fill="none" stroke="#E02020" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>':''}
+    </button>
+    ${delegates.map(d=>`
+    <button onclick="switchToDelegate('${d.principalNric}')" style="width:100%;background:${S.activeProfile===d.principalNric?'#fffbeb':'#f9fafb'};border:${S.activeProfile===d.principalNric?'2px solid #f59e0b':'1px solid #e5e7eb'};border-radius:14px;padding:14px;text-align:left;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;background:#f59e0b;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0">${initials(d.principalName)}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600">${d.principalName}</div>
+        <div style="font-size:11px;color:#92400e">Delegated Authority · ${d.relationship}</div>
+      </div>
+      ${S.activeProfile===d.principalNric?'<svg style="margin-left:auto" width="18" height="18" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>':''}
+    </button>`).join('')}
+    ${!delegates.length?'<div style="padding:8px 0;font-size:12px;color:#9ca3af;text-align:center">No delegated authorities — nominate someone in the Me tab</div>':''}`;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function switchToDelegate(principalNric) {
+  S.activeProfile = principalNric;
+  S.scanProfile   = principalNric === 'self' ? 'self' : principalNric;
+  closeModal();
+  renderTab('home');
+}
+
+// ─── Modal helpers ───────────────────────────────────────────────────────────
+function closeModal(e) {
+  if (!e || e.target.id === 'modal') {
+    document.getElementById('modal').style.display = 'none';
+  }
+}
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+init().then(() => {
+  // After initial render, load own insurance
+  if (S.currentTab === 'home' && S.activeProfile === 'self') {
+    setTimeout(loadOwnInsurance, 100);
+  }
+});
+
+// Re-load insurance after re-renders
+const origRenderTab = renderTab;
+</script>
+</body>
+</html>

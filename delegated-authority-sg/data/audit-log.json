@@ -1,0 +1,82 @@
+[
+  {
+    "id": "a-seed-1",
+    "timestamp": "2026-04-14T09:32:11Z",
+    "type": "delegated_access",
+    "actorNric": "S9912363Z",
+    "actorName": "LIM SOO HUA",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "serviceProvider": "CPF Online Services",
+    "spId": "cpf",
+    "scopesAccessed": ["cpf.ma"],
+    "basis": "Lasting Power of Attorney",
+    "opgVerified": true,
+    "notifyNrics": ["S9912363Z", "S9812353I"]
+  },
+  {
+    "id": "a-seed-2",
+    "timestamp": "2026-04-10T14:15:00Z",
+    "type": "delegated_access",
+    "actorNric": "S9912363Z",
+    "actorName": "LIM SOO HUA",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "serviceProvider": "Insurance Portal (via SGFinDex)",
+    "spId": "insurer",
+    "scopesAccessed": ["sgfindex.policies"],
+    "basis": "Lasting Power of Attorney",
+    "opgVerified": true,
+    "notifyNrics": ["S9912363Z", "S9812353I"]
+  },
+  {
+    "id": "a-seed-3",
+    "timestamp": "2026-02-14T14:22:00Z",
+    "type": "lpa_activated",
+    "actorNric": "SYSTEM_HOSPITAL",
+    "actorName": "Khoo Teck Puat Hospital",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "serviceProvider": null,
+    "spId": null,
+    "scopesAccessed": [],
+    "basis": "Doctor-certified incapacity",
+    "opgVerified": true,
+    "certificate": {
+      "doctorName": "DR CHAN WEI MING",
+      "hospital": "Khoo Teck Puat Hospital",
+      "diagnosis": "Early onset dementia"
+    },
+    "notifyNrics": ["S9912363Z", "S9812353I"]
+  },
+  {
+    "id": "a-seed-4",
+    "timestamp": "2025-10-08T09:30:00Z",
+    "type": "lpa_registered",
+    "actorNric": "S9812353I",
+    "actorName": "LIM BOON HUAT",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "serviceProvider": "Office of the Public Guardian",
+    "spId": null,
+    "scopesAccessed": [],
+    "basis": "Voluntary nomination",
+    "opgVerified": true,
+    "notifyNrics": ["S9912363Z", "S9812353I"]
+  },
+  {
+    "id": "a-seed-5",
+    "timestamp": "2025-09-12T08:00:00Z",
+    "type": "lpa_registered",
+    "actorNric": "S9812379B",
+    "actorName": "TAN AH KOW",
+    "principalNric": "S9812379B",
+    "principalName": "TAN AH KOW",
+    "serviceProvider": "Office of the Public Guardian",
+    "spId": null,
+    "scopesAccessed": [],
+    "basis": "Voluntary nomination",
+    "opgVerified": true,
+    "notifyNrics": ["S9912370B", "S9812379B"]
+  }
+]

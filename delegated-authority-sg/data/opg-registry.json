@@ -1,0 +1,35 @@
+[
+  {
+    "id": "lpa-001",
+    "donorNric": "S9812379B",
+    "donorName": "TAN AH KOW",
+    "doneeNric": "S9912370B",
+    "doneeName": "TAN MEI LING",
+    "relationship": "Daughter",
+    "scope": "property_and_affairs",
+    "registeredAt": "2025-09-12T08:00:00Z",
+    "activatedAt": null,
+    "status": "registered",
+    "triggerCondition": "incapacity_certified_by_doctor",
+    "certificate": null
+  },
+  {
+    "id": "lpa-002",
+    "donorNric": "S9812353I",
+    "donorName": "LIM BOON HUAT",
+    "doneeNric": "S9912363Z",
+    "doneeName": "LIM SOO HUA",
+    "relationship": "Spouse",
+    "scope": "property_and_affairs",
+    "registeredAt": "2025-10-08T09:30:00Z",
+    "activatedAt": "2026-02-14T14:22:00Z",
+    "status": "active",
+    "triggerCondition": "incapacity_certified_by_doctor",
+    "certificate": {
+      "doctorName": "DR CHAN WEI MING",
+      "hospital": "Khoo Teck Puat Hospital",
+      "certifiedAt": "2026-02-14T14:22:00Z",
+      "diagnosis": "Early onset dementia — assessed unable to make property and financial affairs decisions"
+    }
+  }
+]

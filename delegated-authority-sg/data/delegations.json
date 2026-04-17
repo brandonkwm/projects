@@ -1,0 +1,28 @@
+[
+  {
+    "id": "d1",
+    "principalNric": "S9812379B",
+    "principalName": "TAN AH KOW",
+    "delegateNric": "S9912370B",
+    "delegateName": "TAN MEI LING",
+    "relationship": "Daughter",
+    "basis": "Lasting Power of Attorney",
+    "grantedAt": "2025-09-12T08:00:00Z",
+    "status": "pending",
+    "opgId": "lpa-001",
+    "scope": ["cpf", "employment", "housing", "insurance", "sgfindex"]
+  },
+  {
+    "id": "d2",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "delegateNric": "S9912363Z",
+    "delegateName": "LIM SOO HUA",
+    "relationship": "Spouse",
+    "basis": "Lasting Power of Attorney",
+    "grantedAt": "2025-10-08T09:30:00Z",
+    "status": "active",
+    "opgId": "lpa-002",
+    "scope": ["cpf", "employment", "housing", "insurance", "sgfindex"]
+  }
+]

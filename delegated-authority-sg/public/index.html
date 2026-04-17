@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareAuth SG – Delegated Financial Authority</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .singpass-btn {
+      background: #F4333D;
+      color: white;
+      border-radius: 4px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: background 0.15s;
+    }
+    .singpass-btn:hover { background: #d62c35; }
+    .tag-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-blue-900 rounded flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </div>
+      <span class="font-semibold text-blue-900 text-lg">CareAuth SG</span>
+      <span class="tag-pill bg-amber-100 text-amber-700 ml-1">Proof of Concept</span>
+    </div>
+    <a href="/auth/login" class="singpass-btn px-5 py-2 text-sm">
+      Login with Singpass
+    </a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="max-w-5xl mx-auto px-6 pt-16 pb-10">
+    <div class="text-center mb-12">
+      <span class="tag-pill bg-blue-100 text-blue-700 mb-4">Delegated Financial Authority · Singapore</span>
+      <h1 class="text-4xl font-bold text-blue-900 mt-3 mb-4 leading-tight">
+        When someone loses capacity,<br>their family shouldn't lose visibility.
+      </h1>
+      <p class="text-slate-500 text-lg max-w-2xl mx-auto">
+        A concept inspired by the UK's Delegated Authority framework — applied to Singapore's Singpass ecosystem to help families coordinate care when a loved one has a stroke, dementia, or severe injury.
+      </p>
+    </div>
+
+    <!-- Problem / Solution cards -->
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <div class="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </div>
+          <span class="font-semibold text-red-800">Today — broken for families</span>
+        </div>
+        <ul class="space-y-2 text-sm text-red-700">
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>Dad has a stroke. You're his next-of-kin. You have zero visibility into his finances.</li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>Every bank, CPF, housing journey requires <strong>him</strong> to complete a live biometric login.</li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>You can't estimate care costs, subsidy eligibility, or long-term support options.</li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>Families make critical financial decisions blind — often too late.</li>
+        </ul>
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <span class="font-semibold text-emerald-800">With Delegated Authority</span>
+        </div>
+        <ul class="space-y-2 text-sm text-emerald-700">
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>Dad pre-authorises you via Singpass — <strong>while he still can.</strong></li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>You login with <strong>your own</strong> Singpass. No biometrics from Dad required.</li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>You see a limited financial snapshot: CPF, income, housing, medical coverage.</li>
+          <li class="flex gap-2"><span class="mt-0.5 flex-shrink-0">•</span>You can plan care, model costs, and access relevant government support — fast.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Demo journeys -->
+    <h2 class="text-xl font-semibold text-slate-700 mb-4 text-center">Try the demo</h2>
+    <div class="grid md:grid-cols-2 gap-5 mb-16">
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-slate-800 mb-1">Principal (Account Holder)</div>
+            <p class="text-sm text-slate-500 mb-3">Login as the person who wants to grant delegated access — or who has already done so.</p>
+            <div class="bg-slate-50 rounded-lg px-3 py-2 text-xs font-mono text-slate-600 mb-3">
+              <div class="font-semibold text-slate-400 mb-1">Demo NRICs:</div>
+              <div>S9812379B · TAN AH KOW <span class="text-orange-500">(stroke)</span></div>
+              <div>S9812353I · LIM BOON HUAT <span class="text-purple-500">(dementia)</span></div>
+            </div>
+            <a href="/auth/login" class="inline-block singpass-btn px-4 py-2 text-sm">
+              Login as Principal →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white border border-amber-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-slate-800 mb-1">Delegate (Family / Legal Rep)</div>
+            <p class="text-sm text-slate-500 mb-3">Login as the family member with delegated authority — see a limited financial view without any login from the principal.</p>
+            <div class="bg-slate-50 rounded-lg px-3 py-2 text-xs font-mono text-slate-600 mb-3">
+              <div class="font-semibold text-slate-400 mb-1">Demo NRICs:</div>
+              <div>S9912370B · TAN MEI LING <span class="text-blue-500">(daughter)</span></div>
+              <div>S9912363Z · LIM SOO HUA <span class="text-blue-500">(spouse)</span></div>
+            </div>
+            <a href="/auth/login" class="inline-block singpass-btn px-4 py-2 text-sm">
+              Login as Delegate →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="bg-blue-900 text-white rounded-2xl p-8 mb-10">
+      <h2 class="text-xl font-semibold mb-6 text-center">How it works</h2>
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold">1</div>
+          <div class="text-sm font-medium mb-1">Pre-authorise</div>
+          <div class="text-xs text-blue-300">Principal logs in via Singpass and grants named delegate access to specific data fields</div>
+        </div>
+        <div class="text-center">
+          <div class="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold">2</div>
+          <div class="text-sm font-medium mb-1">Crisis happens</div>
+          <div class="text-xs text-blue-300">Stroke, dementia onset, severe injury — principal can no longer perform live biometric login</div>
+        </div>
+        <div class="text-center">
+          <div class="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold">3</div>
+          <div class="text-sm font-medium mb-1">Switch to delegated profile</div>
+          <div class="text-xs text-blue-300">Authorised person opens their own Singpass app and switches profile from Principal to Delegated Authority</div>
+        </div>
+        <div class="text-center">
+          <div class="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold">4</div>
+          <div class="text-sm font-medium mb-1">Scan and access scoped data</div>
+          <div class="text-xs text-blue-300">Using delegated profile, QR login to CPF/insurers is view-only and restricted (e.g. MediSave balance, policy/premium summary)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer note -->
+    <p class="text-center text-xs text-slate-400 pb-10">
+      This is a proof-of-concept using <strong>MockPass</strong> (mock Singpass) — no real personal data is used. Built to demonstrate what delegated authority could enable for Singapore families facing care coordination challenges.
+    </p>
+  </section>
+
+  <!-- Error banner -->
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const err = urlParams.get('error');
+    if (err) {
+      const banner = document.createElement('div');
+      banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg text-sm z-50';
+      const messages = {
+        invalid_state: 'Login session expired — please try again.',
+        token_exchange_failed: 'Could not connect to MockPass. Is it running on port 5156?',
+        nric_not_found: 'Could not extract NRIC from login token.',
+        callback_error: 'An error occurred during login.',
+      };
+      banner.textContent = messages[err] || `Login error: ${err}`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 6000);
+    }
+  </script>
+</body>
+</html>

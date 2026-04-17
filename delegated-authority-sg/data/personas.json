@@ -1,0 +1,208 @@
+{
+  "S9812379B": {
+    "name": "TAN AH KOW",
+    "maskedName": "TAN A** K**",
+    "age": 74,
+    "dob": "1950-03-15",
+    "condition": "stroke",
+    "conditionLabel": "Hospitalised – Ischaemic Stroke",
+    "cpf": { "oa": 45230, "sa": 89100, "ma": 63500, "ra": 112000, "total": 309830 },
+    "employment": {
+      "status": "RETIRED", "employerName": null,
+      "yearOfAssessment": "2024", "assessedIncome": 0, "monthlyPension": 850
+    },
+    "housing": {
+      "type": "HDB 4-Room", "ownership": "OWNER",
+      "outstandingLoan": 0, "monthlyInstalment": 0, "valuationSGD": 480000
+    },
+    "insurance": {
+      "medishieldLife": "ACTIVE", "careshieldLife": "ENROLLED", "eldershield": "OPTED_IN"
+    },
+    "sgfindex": {
+      "lastUpdated": "2026-03-28",
+      "policies": [
+        {
+          "provider": "AIA Singapore",
+          "providerCode": "AIA",
+          "policyType": "Whole Life",
+          "planName": "AIA Pro Achiever 2.0",
+          "status": "Active",
+          "sumAssured": 200000,
+          "annualPremium": 2852,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2003-05-15",
+          "riders": ["AIA Trauma Care Plus", "Total & Permanent Disability"]
+        },
+        {
+          "provider": "Great Eastern Life",
+          "providerCode": "GE",
+          "policyType": "Integrated Shield Plan",
+          "planName": "SupremeHealth P Plus",
+          "status": "Active",
+          "sumAssured": null,
+          "annualPremium": 1843,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2010-01-01",
+          "riders": []
+        },
+        {
+          "provider": "NTUC Income",
+          "providerCode": "INCOME",
+          "policyType": "Term Life",
+          "planName": "Term Life Saver",
+          "status": "Active",
+          "sumAssured": 100000,
+          "annualPremium": 420,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2015-08-20",
+          "riders": []
+        }
+      ]
+    }
+  },
+  "S9912370B": {
+    "name": "TAN MEI LING",
+    "maskedName": "TAN M** L**",
+    "age": 45,
+    "dob": "1979-08-21",
+    "condition": null, "conditionLabel": null,
+    "cpf": { "oa": 128400, "sa": 56700, "ma": 63500, "ra": 0, "total": 248600 },
+    "employment": {
+      "status": "EMPLOYED", "employerName": "HEALTHWAY MEDICAL CORP PTE LTD",
+      "yearOfAssessment": "2024", "assessedIncome": 86400, "monthlyPension": 0
+    },
+    "housing": {
+      "type": "HDB 4-Room", "ownership": "OWNER",
+      "outstandingLoan": 187500, "monthlyInstalment": 1240, "valuationSGD": 520000
+    },
+    "insurance": {
+      "medishieldLife": "ACTIVE", "careshieldLife": "ENROLLED", "eldershield": null
+    },
+    "sgfindex": {
+      "lastUpdated": "2026-04-01",
+      "policies": [
+        {
+          "provider": "Prudential Singapore",
+          "providerCode": "PRU",
+          "policyType": "Whole Life",
+          "planName": "PRULife Multiplier",
+          "status": "Active",
+          "sumAssured": 300000,
+          "annualPremium": 3640,
+          "premiumFrequency": "Monthly",
+          "inceptionDate": "2006-11-12",
+          "riders": ["Critical Illness", "Disability Income"]
+        },
+        {
+          "provider": "AXA Insurance",
+          "providerCode": "AXA",
+          "policyType": "Integrated Shield Plan",
+          "planName": "AXA Shield Plan B",
+          "status": "Active",
+          "sumAssured": null,
+          "annualPremium": 920,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2012-03-01",
+          "riders": []
+        }
+      ]
+    }
+  },
+  "S9812353I": {
+    "name": "LIM BOON HUAT",
+    "maskedName": "LIM B** H**",
+    "age": 68,
+    "dob": "1957-11-04",
+    "condition": "dementia",
+    "conditionLabel": "Early Onset Dementia",
+    "cpf": { "oa": 12800, "sa": 38200, "ma": 63500, "ra": 186000, "total": 300500 },
+    "employment": {
+      "status": "RETIRED", "employerName": null,
+      "yearOfAssessment": "2024", "assessedIncome": 12000, "monthlyPension": 1540
+    },
+    "housing": {
+      "type": "HDB 5-Room", "ownership": "JOINT_OWNER",
+      "outstandingLoan": 0, "monthlyInstalment": 0, "valuationSGD": 620000
+    },
+    "insurance": {
+      "medishieldLife": "ACTIVE", "careshieldLife": "ENROLLED", "eldershield": "OPTED_IN"
+    },
+    "sgfindex": {
+      "lastUpdated": "2026-04-01",
+      "policies": [
+        {
+          "provider": "AIA Singapore",
+          "providerCode": "AIA",
+          "policyType": "Whole Life",
+          "planName": "AIA Wealth Pro",
+          "status": "Active",
+          "sumAssured": 150000,
+          "annualPremium": 2100,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "1998-06-01",
+          "riders": ["AIA Total & Permanent Disability"]
+        },
+        {
+          "provider": "Manulife Singapore",
+          "providerCode": "MANULIFE",
+          "policyType": "Endowment",
+          "planName": "Manulife RetireReady Plus",
+          "status": "Active",
+          "sumAssured": 80000,
+          "annualPremium": 4800,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2010-09-15",
+          "riders": []
+        },
+        {
+          "provider": "Singlife with Aviva",
+          "providerCode": "SINGLIFE",
+          "policyType": "Integrated Shield Plan",
+          "planName": "Singlife Shield Plan A",
+          "status": "Active",
+          "sumAssured": null,
+          "annualPremium": 2240,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2014-02-20",
+          "riders": ["Enhanced Income Benefit"]
+        }
+      ]
+    }
+  },
+  "S9912363Z": {
+    "name": "LIM SOO HUA",
+    "maskedName": "LIM S** H**",
+    "age": 65,
+    "dob": "1961-02-17",
+    "condition": null, "conditionLabel": null,
+    "cpf": { "oa": 8900, "sa": 22400, "ma": 63500, "ra": 94000, "total": 188800 },
+    "employment": {
+      "status": "RETIRED", "employerName": null,
+      "yearOfAssessment": "2024", "assessedIncome": 0, "monthlyPension": 720
+    },
+    "housing": {
+      "type": "HDB 5-Room", "ownership": "JOINT_OWNER",
+      "outstandingLoan": 0, "monthlyInstalment": 0, "valuationSGD": 620000
+    },
+    "insurance": {
+      "medishieldLife": "ACTIVE", "careshieldLife": "ENROLLED", "eldershield": "OPTED_IN"
+    },
+    "sgfindex": {
+      "lastUpdated": "2026-04-01",
+      "policies": [
+        {
+          "provider": "Great Eastern Life",
+          "providerCode": "GE",
+          "policyType": "Whole Life",
+          "planName": "Great Eastern SMART Whole Life",
+          "status": "Active",
+          "sumAssured": 100000,
+          "annualPremium": 1640,
+          "premiumFrequency": "Annual",
+          "inceptionDate": "2000-03-10",
+          "riders": []
+        }
+      ]
+    }
+  }
+}

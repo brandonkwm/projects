@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hospital Clinical System – Incapacity Certification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family:'Inter',sans-serif; background:#0f172a; color:#e2e8f0; }
+    .terminal-green { color:#4ade80; }
+    .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; }
+    .input { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 14px; color:#e2e8f0; width:100%; outline:none; font-size:14px; }
+    .input:focus { border-color:#4ade80; }
+    .btn-green { background:#166534; color:#4ade80; border:1px solid #4ade80; border-radius:8px; padding:12px 24px; font-weight:700; cursor:pointer; font-size:14px; transition:all 0.15s; }
+    .btn-green:hover { background:#14532d; }
+    .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <div style="background:#1e293b;border-bottom:1px solid #334155;padding:12px 24px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="background:#166534;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#4ade80;letter-spacing:0.06em">HOSPITAL</div>
+      <span style="font-size:14px;font-weight:600;color:#94a3b8">Clinical Capacity Assessment System</span>
+      <span style="font-size:11px;color:#475569">· Integrated with Singpass / OPG</span>
+    </div>
+    <div style="font-size:11px;color:#475569">SGH Demo Environment · v2.4.1</div>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-6 py-8">
+
+    <!-- Explainer -->
+    <div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:12px;padding:16px 20px;margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Demo Context</div>
+      <p style="font-size:13px;color:#93c5fd;line-height:1.6">
+        This simulates a <strong style="color:#bfdbfe">hospital EMR system</strong> integrated with Singpass and the Office of the Public Guardian. When a doctor certifies a patient's mental incapacity, this system calls the OPG API — which activates any registered LPA and notifies the delegate's Singpass inbox.
+      </p>
+    </div>
+
+    <!-- Patient admission card -->
+    <div class="card mb-6">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Patient on Ward</div>
+
+      <!-- Pre-filled patient: TAN AH KOW -->
+      <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid #1e293b">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#f1f5f9">TAN AH KOW</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px">S9812379B · Age 74 · Male</div>
+          </div>
+          <div>
+            <div style="background:#1e3a8a;color:#93c5fd;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-align:center">ADMITTED</div>
+            <div style="font-size:10px;color:#475569;margin-top:4px;text-align:right">Apr 17, 2026 · 07:42</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="font-size:11px;color:#64748b">Ward: <span style="color:#94a3b8">7B – Neurology</span></div>
+          <div style="font-size:11px;color:#64748b">Diagnosis: <span style="color:#fbbf24">Ischaemic Stroke</span></div>
+          <div style="font-size:11px;color:#64748b">Attending: <span style="color:#94a3b8">Dr Priya Nair</span></div>
+          <div style="font-size:11px;color:#64748b">LPA on file: <span style="color:#4ade80">Registered ✓</span></div>
+        </div>
+      </div>
+
+      <!-- LPA status check -->
+      <div style="background:#14532d;border:1px solid #4ade80;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap-8px">
+          <span class="status-dot" style="background:#4ade80"></span>
+          <span style="font-size:12px;font-weight:600;color:#4ade80">OPG Registry — LPA Found</span>
+        </div>
+        <div style="font-size:11px;color:#86efac;margin-top:6px;line-height:1.5">
+          Donee: <strong>TAN MEI LING</strong> (Daughter) · Registered 12 Sep 2025<br>
+          Scope: Property &amp; Affairs · Status: <strong>REGISTERED — awaiting incapacity certificate</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incapacity certification form -->
+    <div class="card mb-6">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">
+        Mental Capacity Assessment — Certification Form
+      </div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5">
+        Under the Mental Capacity Act (Cap 177A), a registered medical practitioner must certify that the donor lacks capacity before an LPA can be activated. This certification will be transmitted to the Office of the Public Guardian.
+      </div>
+
+      <div style="display:grid;gap:14px">
+        <div>
+          <label style="font-size:11px;color:#64748b;display:block;margin-bottom:6px">Patient NRIC *</label>
+          <input class="input" id="patient-nric" value="S9812379B" placeholder="S1234567A">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;color:#64748b;display:block;margin-bottom:6px">Certifying Doctor *</label>
+            <input class="input" id="doctor-name" value="DR PRIYA NAIR" placeholder="DR FULL NAME">
+          </div>
+          <div>
+            <label style="font-size:11px;color:#64748b;display:block;margin-bottom:6px">Hospital *</label>
+            <input class="input" id="hospital-name" value="Singapore General Hospital" placeholder="Hospital name">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:#64748b;display:block;margin-bottom:6px">Clinical Assessment / Diagnosis *</label>
+          <textarea class="input" id="diagnosis" rows="3" style="resize:none">Ischaemic stroke affecting left hemisphere. Patient assessed to lack capacity to make decisions regarding property and financial affairs. GCS 9/15. Unable to communicate or comprehend financial information.</textarea>
+        </div>
+
+        <div style="background:#1e1b4b;border:1px solid #4338ca;border-radius:8px;padding:12px">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+            <input type="checkbox" id="confirm-check" style="margin-top:2px;accent-color:#818cf8">
+            <span style="font-size:11px;color:#a5b4fc;line-height:1.5">
+              I, the undersigned registered medical practitioner, certify that I have personally assessed the above-named patient and, in my professional opinion, the patient lacks the mental capacity as defined under the Mental Capacity Act to make decisions regarding their property and affairs. This certification will be digitally transmitted to the Office of the Public Guardian and will activate any registered Lasting Power of Attorney.
+            </span>
+          </label>
+        </div>
+
+        <button onclick="submitCertification()" class="btn-green" id="submit-btn">
+          Issue Incapacity Certificate &amp; Activate LPA
+        </button>
+      </div>
+    </div>
+
+    <!-- Result panel (hidden until submitted) -->
+    <div id="result-panel" style="display:none" class="card">
+      <div id="result-content"></div>
+    </div>
+
+    <!-- Navigation -->
+    <div style="text-align:center;margin-top:20px">
+      <a href="/" style="font-size:12px;color:#475569;text-decoration:none;margin-right:20px">← Back to Demo Guide</a>
+      <a href="/app" style="font-size:12px;color:#60a5fa;text-decoration:none">Open Singpass App →</a>
+    </div>
+  </div>
+
+<script>
+async function submitCertification() {
+  const check = document.getElementById('confirm-check');
+  if (!check.checked) {
+    alert('Please confirm the certification statement before submitting.');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Transmitting to OPG…';
+  btn.disabled = true;
+
+  const res = await fetch('/api/hospital/certify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patientNric:  document.getElementById('patient-nric').value.trim().toUpperCase(),
+      doctorName:   document.getElementById('doctor-name').value.trim(),
+      hospital:     document.getElementById('hospital-name').value.trim(),
+      diagnosis:    document.getElementById('diagnosis').value.trim(),
+    }),
+  });
+
+  const data = await res.json();
+  const panel   = document.getElementById('result-panel');
+  const content = document.getElementById('result-content');
+  panel.style.display = 'block';
+
+  if (!res.ok) {
+    content.innerHTML = `
+      <div style="color:#f87171;font-weight:600;margin-bottom:8px">⚠ Transmission Failed</div>
+      <div style="font-size:13px;color:#94a3b8">${data.error}</div>`;
+    btn.textContent = 'Issue Incapacity Certificate & Activate LPA';
+    btn.disabled = false;
+    return;
+  }
+
+  btn.textContent = '✓ Certificate Issued';
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;gap-8px;margin-bottom:12px">
+      <span class="status-dot" style="background:#4ade80;width:12px;height:12px"></span>
+      <span style="font-size:15px;font-weight:700;color:#4ade80"> LPA Successfully Activated</span>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">Transmission Receipt</div>
+      <div style="font-size:12px;color:#94a3b8;line-height:1.8">
+        Certificate issued at: <strong style="color:#e2e8f0">${new Date().toLocaleString('en-SG')}</strong><br>
+        OPG Reference: <strong style="color:#e2e8f0">OPG-${Date.now().toString(36).toUpperCase()}</strong><br>
+        LPAs activated: <strong style="color:#4ade80">${data.activatedCount}</strong><br>
+        Notified donees:<br>
+        ${(data.donees||[]).map(d=>`&nbsp;&nbsp;• <strong style="color:#e2e8f0">${d.doneeName}</strong> (${d.doneeNric})`).join('<br>')}
+      </div>
+    </div>
+    <div style="background:#14532d;border:1px solid #4ade80;border-radius:8px;padding:12px;font-size:12px;color:#86efac;line-height:1.6">
+      <strong style="color:#4ade80">What happens next:</strong><br>
+      • Singpass sends a push notification to <strong>TAN MEI LING</strong><br>
+      • She can now switch to the Delegated Authority profile in her Singpass app<br>
+      • She can scan CPF / Insurance QR codes using delegated identity<br>
+      • Every access is logged and visible to both parties
+    </div>
+    <div style="margin-top:14px;text-align:center">
+      <a href="/app" style="display:inline-block;background:#1d4ed8;color:white;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+        → Open Singpass App (login as TAN MEI LING)
+      </a>
+    </div>`;
+
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

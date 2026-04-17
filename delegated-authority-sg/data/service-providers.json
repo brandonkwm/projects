@@ -1,0 +1,24 @@
+{
+  "cpf": {
+    "id": "cpf",
+    "name": "CPF Online Services",
+    "shortName": "CPF",
+    "bgColor": "#005B94",
+    "url": "/sp/cpf",
+    "ownScopes": ["personal", "cpf.oa", "cpf.sa", "cpf.ma", "cpf.ra", "income", "housing"],
+    "delegatedScopes": ["cpf.ma"],
+    "delegatedScopeLabel": "MediSave balance only",
+    "delegatedRationale": "MediSave is the key account for coordinating hospital bills, Medifund applications, and care facility co-payments"
+  },
+  "insurer": {
+    "id": "insurer",
+    "name": "Insurance Portal (via SGFinDex)",
+    "shortName": "Insurance",
+    "bgColor": "#6B21A8",
+    "url": "/sp/insurer",
+    "ownScopes": ["personal", "sgfindex.policies"],
+    "delegatedScopes": ["sgfindex.policies"],
+    "delegatedScopeLabel": "Active policies · sum insured · annual premiums",
+    "delegatedRationale": "Knowing which insurers hold active policies helps coordinate hospital claims, identify lapsing policies, and plan long-term care funding"
+  }
+}
