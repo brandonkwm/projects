@@ -9,9 +9,12 @@
     "scope": "property_and_affairs",
     "registeredAt": "2025-09-12T08:00:00Z",
     "activatedAt": null,
-    "status": "registered",
+    "status": "revoked",
     "triggerCondition": "incapacity_certified_by_doctor",
-    "certificate": null
+    "certificate": null,
+    "revokedAt": "2026-04-17T09:00:15.251Z",
+    "revokedBy": "SYSTEM_TIMEOUT",
+    "revocationReason": "Pending acceptance timed out after 1 day"
   },
   {
     "id": "lpa-002",
@@ -47,5 +50,37 @@
     "certificate": null,
     "revokedAt": "2026-04-17T08:29:28.229Z",
     "revokedBy": "S9812353I"
+  },
+  {
+    "id": "lpa-1776415937857",
+    "donorNric": "S9912363Z",
+    "donorName": "LIM SOO HUA",
+    "doneeNric": "S1231231C",
+    "doneeName": "S1231231C",
+    "relationship": "Child",
+    "scope": "property_and_affairs",
+    "registeredAt": "2026-04-17T08:52:17.857Z",
+    "activatedAt": null,
+    "acceptedAt": null,
+    "status": "revoked",
+    "triggerCondition": "incapacity_certified_by_doctor",
+    "certificate": null,
+    "revokedAt": "2026-04-17T08:52:25.991Z",
+    "revokedBy": "S9912363Z"
+  },
+  {
+    "id": "lpa-1776416425730",
+    "donorNric": "S9912363Z",
+    "donorName": "LIM SOO HUA",
+    "doneeNric": "S1231231A",
+    "doneeName": "S1231231A",
+    "relationship": "Child",
+    "scope": "property_and_affairs",
+    "registeredAt": "2026-04-17T09:00:25.730Z",
+    "activatedAt": null,
+    "acceptedAt": null,
+    "status": "pending_acceptance",
+    "triggerCondition": "incapacity_certified_by_doctor",
+    "certificate": null
   }
 ]

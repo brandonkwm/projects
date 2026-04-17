@@ -8,7 +8,7 @@
     "relationship": "Daughter",
     "basis": "Lasting Power of Attorney",
     "grantedAt": "2025-09-12T08:00:00Z",
-    "status": "pending",
+    "status": "revoked",
     "opgId": "lpa-001",
     "scope": [
       "cpf",
@@ -48,6 +48,44 @@
     "grantedAt": "2026-04-17T08:24:34.652Z",
     "status": "revoked",
     "opgId": "lpa-1776414274652",
+    "scope": [
+      "cpf",
+      "employment",
+      "housing",
+      "insurance",
+      "sgfindex"
+    ]
+  },
+  {
+    "id": "d1776415937858",
+    "principalNric": "S9912363Z",
+    "principalName": "LIM SOO HUA",
+    "delegateNric": "S1231231C",
+    "delegateName": "S1231231C",
+    "relationship": "Child",
+    "basis": "Lasting Power of Attorney",
+    "grantedAt": "2026-04-17T08:52:17.857Z",
+    "status": "revoked",
+    "opgId": "lpa-1776415937857",
+    "scope": [
+      "cpf",
+      "employment",
+      "housing",
+      "insurance",
+      "sgfindex"
+    ]
+  },
+  {
+    "id": "d1776416425731",
+    "principalNric": "S9912363Z",
+    "principalName": "LIM SOO HUA",
+    "delegateNric": "S1231231A",
+    "delegateName": "S1231231A",
+    "relationship": "Child",
+    "basis": "Lasting Power of Attorney",
+    "grantedAt": "2026-04-17T09:00:25.730Z",
+    "status": "pending_acceptance",
+    "opgId": "lpa-1776416425730",
     "scope": [
       "cpf",
       "employment",

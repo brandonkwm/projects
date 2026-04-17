@@ -140,6 +140,7 @@ const S = {
   currentTab: 'home',
   scanProfile: 'self',   // profile selected on scan tab
   hasNewNotif: false,
+  pendingCountdownInterval: null,
 };
 
 const fmt = n => new Intl.NumberFormat('en-SG',{style:'currency',currency:'SGD',maximumFractionDigits:0}).format(n);
@@ -189,9 +190,12 @@ function renderTab(tab) {
   screen.scrollTop = 0;
   const fns = { home: renderHome, scan: renderScan, inbox: renderInbox, me: renderMe };
   screen.innerHTML = fns[tab]?.() || '';
-  if (tab === 'home' && S.activeProfile === 'self') {
-    setTimeout(loadOwnInsurance, 80);
+  if (S.pendingCountdownInterval) {
+    clearInterval(S.pendingCountdownInterval);
+    S.pendingCountdownInterval = null;
   }
+  if (tab === 'home' && S.activeProfile === 'self') setTimeout(loadOwnInsurance, 80);
+  if ((tab === 'home' && S.activeProfile === 'self') || tab === 'me') startPendingCountdownTicker();
 }
 
 // ─── HOME tab ───────────────────────────────────────────────────────────────
@@ -252,6 +256,7 @@ function renderHome() {
       </div>
     </div>
     ${renderActivationLink(d.opgId, d.principalNric)}
+    ${d.lifecycleStatus === 'pending_acceptance' && d.expiresAt ? `<div style="font-size:10px;color:#92400e;margin-top:8px">Auto-revokes in <span data-countdown="${d.expiresAt}">--:--:--</span></div>` : ''}
     ${d.canAccept ? `<button onclick="acceptNomination('${d.opgId}')" style="margin-top:8px;font-size:11px;color:#065f46;background:none;border:none;padding:0;cursor:pointer;font-weight:700">Accept nomination</button>` : ''}
   </div>`;
   }).join('')}` : ''}
@@ -297,6 +302,29 @@ function lifecycleFootnote(status) {
   if (status === 'nominated') return 'Delegated authority nomination accepted';
   if (status === 'revoked') return 'Delegated authority access revoked';
   return 'Delegated authority status';
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return '00:00:00';
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function startPendingCountdownTicker() {
+  const nodes = Array.from(document.querySelectorAll('[data-countdown]'));
+  if (!nodes.length) return;
+  const tick = () => {
+    const now = Date.now();
+    nodes.forEach(node => {
+      const expiry = new Date(node.getAttribute('data-countdown')).getTime();
+      node.textContent = formatCountdown(expiry - now);
+    });
+  };
+  tick();
+  S.pendingCountdownInterval = setInterval(tick, 1000);
 }
 
 function showStatusTooltip(status) {
@@ -563,9 +591,10 @@ function renderInbox() {
   const typeConfig = {
     delegated_access: { icon:'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', bg:'#eff6ff', color:'#1d4ed8', label:'Delegated Access' },
     lpa_activated:    { icon:'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg:'#f0fdf4', color:'#15803d', label:'LPA Activated' },
-    lpa_registered:   { icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', bg:'#fffbeb', color:'#92400e', label:'LPA Registered' },
+    lpa_registered:   { icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', bg:'#fffbeb', color:'#92400e', label:'Nomination Submitted' },
     lpa_accepted:     { icon:'M5 13l4 4L19 7', bg:'#eef2ff', color:'#4338ca', label:'LPA Accepted' },
     lpa_revoked:      { icon:'M6 18L18 6M6 6l12 12', bg:'#fef2f2', color:'#b91c1c', label:'LPA Revoked' },
+    lpa_auto_revoked: { icon:'M6 18L18 6M6 6l12 12', bg:'#fef2f2', color:'#b91c1c', label:'LPA Auto Revoked' },
   };
 
   const myNric = S.me.nric;
@@ -595,6 +624,9 @@ function renderInbox() {
       if (isActor) message = `You withdrew a delegated authority nomination`;
       else if (isPrincipal) message = `A delegated authority nomination under your account was revoked`;
       else message = `Your delegated authority nomination was revoked`;
+    } else if (e.type === 'lpa_auto_revoked') {
+      if (isPrincipal) message = `Your delegated authority nomination auto-revoked after 1 day pending acceptance`;
+      else message = `A delegated authority nomination auto-revoked after 1 day pending acceptance`;
     }
 
     return `
@@ -651,8 +683,10 @@ function renderMe() {
         ${r.status==='nominated'?`<div style="font-size:9px;color:#92400e;margin-top:4px;max-width:100px;text-align:right">Awaiting doctor certificate</div>`:''}
         ${r.status==='pending_acceptance'?`<div style="font-size:9px;color:#6b7280;margin-top:4px;max-width:120px;text-align:right">Awaiting delegate acceptance</div>`:''}
         ${r.certificate?`<div style="font-size:9px;color:#15803d;margin-top:4px;max-width:100px;text-align:right">Certified by ${r.certificate.doctorName}</div>`:''}
+        ${r.status==='revoked'?`<div style="font-size:9px;color:#9ca3af;margin-top:4px;max-width:130px;text-align:right">Auto-deleted in 30 days</div>`:''}
       </div>
     </div>
+    ${r.status==='pending_acceptance' ? `<div style="font-size:10px;color:#92400e;margin-top:8px">Auto-revokes in <span data-countdown="${new Date(new Date(r.registeredAt).getTime() + 24*60*60*1000).toISOString()}">--:--:--</span></div>` : ''}
     <div style="margin-top:8px;display:flex;gap:10px">
       ${r.certificate?`<button onclick="showCertificateDetailsFromEncoded('${encodeURIComponent(JSON.stringify(r.certificate))}')" style="font-size:11px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`:''}
       ${r.status!=='revoked'?`<button onclick="revokeNomination('${r.id}','${encodeURIComponent(r.doneeName)}')" style="font-size:11px;color:#dc2626;background:none;border:none;padding:0;cursor:pointer;font-weight:600">Withdraw nomination</button>`:''}
@@ -672,6 +706,8 @@ function renderMe() {
       </div>
       <div class="${lifecycleMeta(r.status).badgeClass}">${lifecycleMeta(r.status).label}</div>
     </div>
+    ${r.status==='pending_acceptance' ? `<div style="font-size:10px;color:#92400e;margin-top:6px">Auto-revokes in <span data-countdown="${new Date(new Date(r.registeredAt).getTime() + 24*60*60*1000).toISOString()}">--:--:--</span></div>` : ''}
+    ${r.status==='revoked'?`<div style="font-size:10px;color:#9ca3af;margin-top:6px">Revoked entry auto-deletes in 30 days.</div>`:''}
     ${r.certificate?`<button onclick="showCertificateDetailsFromEncoded('${encodeURIComponent(JSON.stringify(r.certificate))}')" style="margin-top:8px;font-size:11px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`:''}
   </div>`).join('')}` : ''}
 
@@ -789,6 +825,7 @@ function showLpaActivationDetails(lpaId) {
       <div style="font-size:13px;font-weight:600;margin-bottom:8px">${rec.doneeName}</div>
       <div style="font-size:11px;color:#6b7280">Status</div>
       <div style="font-size:13px;font-weight:600;margin-bottom:8px">${lifecycleMeta(rec.status).label}</div>
+      ${rec.status === 'revoked' ? `<div style="font-size:10px;color:#9ca3af;margin-bottom:8px">Revoked entries are auto-deleted after 30 days.</div>` : ''}
       <div style="font-size:11px;color:#6b7280">Trigger condition</div>
       <div style="font-size:12px;color:#374151;margin-bottom:8px">${(rec.triggerCondition || 'incapacity_certified_by_doctor').replaceAll('_', ' ')}</div>
       ${c ? `

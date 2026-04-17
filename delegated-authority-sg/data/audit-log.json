@@ -1,5 +1,73 @@
 [
   {
+    "id": "a1776416425731z9ut",
+    "timestamp": "2026-04-17T09:00:25.731Z",
+    "scopesAccessed": [],
+    "spId": null,
+    "serviceProvider": "Office of the Public Guardian",
+    "type": "lpa_registered",
+    "actorNric": "S9912363Z",
+    "actorName": "LIM SOO HUA",
+    "principalNric": "S9912363Z",
+    "principalName": "LIM SOO HUA",
+    "basis": "Voluntary nomination",
+    "notifyNrics": [
+      "S9912363Z",
+      "S1231231A"
+    ]
+  },
+  {
+    "id": "a1776416415251ooxl",
+    "timestamp": "2026-04-17T09:00:15.251Z",
+    "scopesAccessed": [],
+    "spId": null,
+    "serviceProvider": "Office of the Public Guardian",
+    "type": "lpa_auto_revoked",
+    "actorNric": "SYSTEM_TIMEOUT",
+    "actorName": "System",
+    "principalNric": "S9812379B",
+    "principalName": "TAN AH KOW",
+    "basis": "Nomination pending acceptance expired after 1 day",
+    "notifyNrics": [
+      "S9812379B",
+      "S9912370B"
+    ]
+  },
+  {
+    "id": "a1776415945991pl58",
+    "timestamp": "2026-04-17T08:52:25.991Z",
+    "scopesAccessed": [],
+    "spId": null,
+    "serviceProvider": "Office of the Public Guardian",
+    "type": "lpa_revoked",
+    "actorNric": "S9912363Z",
+    "actorName": "LIM SOO HUA",
+    "principalNric": "S9912363Z",
+    "principalName": "LIM SOO HUA",
+    "basis": "Principal withdrew nomination",
+    "notifyNrics": [
+      "S9912363Z",
+      "S1231231C"
+    ]
+  },
+  {
+    "id": "a17764159378584xga",
+    "timestamp": "2026-04-17T08:52:17.858Z",
+    "scopesAccessed": [],
+    "spId": null,
+    "serviceProvider": "Office of the Public Guardian",
+    "type": "lpa_registered",
+    "actorNric": "S9912363Z",
+    "actorName": "LIM SOO HUA",
+    "principalNric": "S9912363Z",
+    "principalName": "LIM SOO HUA",
+    "basis": "Voluntary nomination",
+    "notifyNrics": [
+      "S9912363Z",
+      "S1231231C"
+    ]
+  },
+  {
     "id": "a1776414568229e3sz",
     "timestamp": "2026-04-17T08:29:28.229Z",
     "scopesAccessed": [],

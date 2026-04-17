@@ -33,6 +33,8 @@ let auditLog      = JSON.parse(fs.readFileSync(paths.auditLog,       'utf8'));
 const servicePros = JSON.parse(fs.readFileSync(paths.serviceProviders,'utf8'));
 
 const save = (key, data) => fs.writeFileSync(paths[key], JSON.stringify(data, null, 2));
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const THIRTY_DAYS_MS = 30 * ONE_DAY_MS;
 
 // Backward compatibility for older seed values.
 opgRegistry = opgRegistry.map(r => ({
@@ -46,6 +48,60 @@ delegations = delegations.map(d => ({
 
 // ─── In-memory SP session store ───────────────────────────────────────────────
 const spSessions = {};
+
+function applyLifecycleMaintenance() {
+  let changedOpg = false;
+  let changedDelegations = false;
+  const now = Date.now();
+
+  // Auto-revoke pending acceptance nominations after 1 day.
+  opgRegistry.forEach(reg => {
+    if (reg.status !== 'pending_acceptance') return;
+    const since = new Date(reg.registeredAt || reg.createdAt || 0).getTime();
+    if (!since || now - since < ONE_DAY_MS) return;
+
+    reg.status = 'revoked';
+    reg.revokedAt = new Date(now).toISOString();
+    reg.revokedBy = 'SYSTEM_TIMEOUT';
+    reg.revocationReason = 'Pending acceptance timed out after 1 day';
+    changedOpg = true;
+
+    const del = delegations.find(d => d.opgId === reg.id);
+    if (del && del.status !== 'revoked') {
+      del.status = 'revoked';
+      changedDelegations = true;
+    }
+
+    addAuditEntry({
+      type: 'lpa_auto_revoked',
+      actorNric: 'SYSTEM_TIMEOUT',
+      actorName: 'System',
+      principalNric: reg.donorNric,
+      principalName: reg.donorName,
+      serviceProvider: 'Office of the Public Guardian',
+      basis: 'Nomination pending acceptance expired after 1 day',
+      notifyNrics: [reg.donorNric, reg.doneeNric],
+    });
+  });
+
+  // Auto-delete revoked entries after 30 days retention.
+  const beforeOpgLen = opgRegistry.length;
+  opgRegistry = opgRegistry.filter(reg => {
+    if (reg.status !== 'revoked') return true;
+    const revokedAt = new Date(reg.revokedAt || reg.updatedAt || 0).getTime();
+    if (!revokedAt) return true;
+    return now - revokedAt < THIRTY_DAYS_MS;
+  });
+  if (opgRegistry.length !== beforeOpgLen) changedOpg = true;
+
+  const validOpgIds = new Set(opgRegistry.map(r => r.id));
+  const beforeDelLen = delegations.length;
+  delegations = delegations.filter(d => !d.opgId || validOpgIds.has(d.opgId));
+  if (delegations.length !== beforeDelLen) changedDelegations = true;
+
+  if (changedOpg) save('opg', opgRegistry);
+  if (changedDelegations) save('delegations', delegations);
+}
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -165,6 +221,7 @@ app.get('/app', (req, res) => {
 
 // ─── API: current user ────────────────────────────────────────────────────────
 app.get('/api/me', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   const persona  = personas[nric] || { name: 'Unknown User', age: null };
 
@@ -191,6 +248,9 @@ app.get('/api/me', requireAuth, (req, res) => {
       lifecycleStatus,
       triggerCondition: reg?.triggerCondition || 'incapacity_certified_by_doctor',
       canAccept: lifecycleStatus === 'pending_acceptance' && reg?.doneeNric === nric,
+      expiresAt: lifecycleStatus === 'pending_acceptance'
+        ? new Date(new Date(reg?.registeredAt || d.grantedAt || Date.now()).getTime() + ONE_DAY_MS).toISOString()
+        : null,
     };
   });
 
@@ -299,6 +359,7 @@ app.delete('/api/delegation/:id', requireAuth, (req, res) => {
 
 // ─── API: OPG registry ────────────────────────────────────────────────────────
 app.get('/api/opg/registry', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   res.json({
     asDonor: opgRegistry.filter(r => r.donorNric === nric),
@@ -307,6 +368,7 @@ app.get('/api/opg/registry', requireAuth, (req, res) => {
 });
 
 app.post('/api/opg/nominate', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   const { doneeNric, relationship } = req.body;
 
@@ -372,6 +434,7 @@ app.post('/api/opg/nominate', requireAuth, (req, res) => {
 });
 
 app.post('/api/opg/nomination/:id/accept', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   const reg = opgRegistry.find(r => r.id === req.params.id);
   if (!reg) return res.status(404).json({ error: 'LPA nomination not found' });
@@ -401,6 +464,7 @@ app.post('/api/opg/nomination/:id/accept', requireAuth, (req, res) => {
 });
 
 app.delete('/api/opg/nomination/:id', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   const reg = opgRegistry.find(r => r.id === req.params.id && r.donorNric === nric);
   if (!reg) return res.status(404).json({ error: 'LPA nomination not found' });
@@ -431,6 +495,7 @@ app.delete('/api/opg/nomination/:id', requireAuth, (req, res) => {
 
 // ─── API: hospital trigger (LPA activation) ───────────────────────────────────
 app.post('/api/hospital/certify', (req, res) => {
+  applyLifecycleMaintenance();
   const { patientNric, doctorName, hospital, diagnosis } = req.body;
 
   const normalized = (patientNric || '').trim().toUpperCase();
@@ -480,6 +545,7 @@ app.post('/api/hospital/certify', (req, res) => {
 
 // ─── API: audit log ───────────────────────────────────────────────────────────
 app.get('/api/audit-log', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const { nric } = req.session;
   const entries = auditLog
     .filter(e => e.notifyNrics?.includes(nric))
@@ -490,6 +556,7 @@ app.get('/api/audit-log', requireAuth, (req, res) => {
 
 // ─── API: SP session (QR scan simulation) ────────────────────────────────────
 app.post('/api/sp-session', requireAuth, (req, res) => {
+  applyLifecycleMaintenance();
   const actorNric    = req.session.nric;
   const { spId, principalNric } = req.body;
 
