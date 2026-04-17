@@ -189,6 +189,9 @@ function renderTab(tab) {
   screen.scrollTop = 0;
   const fns = { home: renderHome, scan: renderScan, inbox: renderInbox, me: renderMe };
   screen.innerHTML = fns[tab]?.() || '';
+  if (tab === 'home' && S.activeProfile === 'self') {
+    setTimeout(loadOwnInsurance, 80);
+  }
 }
 
 // ─── HOME tab ───────────────────────────────────────────────────────────────
@@ -196,8 +199,8 @@ function renderHome() {
   if (S.activeProfile !== 'self') return renderDelegatedHome();
 
   const me = S.me;
-  const delegates = me.delegatedAuthorities || [];
-  const hasDelegates = delegates.length > 0;
+  const lifecycleTiles = (me.delegatedAuthorityTiles || []).filter(d => d.lifecycleStatus !== 'revoked');
+  const hasLifecycleTiles = lifecycleTiles.length > 0;
   const maskedNric = me.nric[0] + 'XXXX' + me.nric.slice(-4);
 
   return `
@@ -229,24 +232,29 @@ function renderHome() {
     ${quickAction('lpa','My LPA','M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',()=>setTab('me'))}
   </div>
 
-  ${hasDelegates ? `
+  ${hasLifecycleTiles ? `
   <div class="section-title">Delegated Authority</div>
-  ${delegates.map(d => `
-  <div class="app-card" style="border-left:4px solid #f59e0b;cursor:pointer" onclick="switchToDelegate('${d.principalNric}','${d.principalName}')">
+  ${lifecycleTiles.map(d => {
+    const meta = lifecycleMeta(d.lifecycleStatus);
+    return `
+  <div class="app-card" style="border-left:4px solid ${meta.borderColor}">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:40px;height:40px;background:#fef3c7;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="20" height="20" fill="none" stroke="#92400e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <div style="width:40px;height:40px;background:${meta.iconBg};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" fill="none" stroke="${meta.iconColor}" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-weight:600;font-size:14px">${d.principalName}</div>
+        <div style="font-weight:700;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:#6b7280">Delegated Authority</div>
+        <div style="font-weight:600;font-size:14px;margin-top:2px">${d.principalName}</div>
         <div style="font-size:11px;color:#6b7280">${d.relationship} · ${d.basis}</div>
       </div>
       <div style="text-align:right">
-        <div class="badge-active">Active</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:4px">Tap to switch →</div>
+        <button onclick="showStatusTooltip('${d.lifecycleStatus}')" class="${meta.badgeClass}" style="border:none;cursor:pointer">${meta.label}</button>
       </div>
     </div>
-  </div>`).join('')}` : ''}
+    ${renderActivationLink(d.opgId, d.principalNric)}
+    ${d.canAccept ? `<button onclick="acceptNomination('${d.opgId}')" style="margin-top:8px;font-size:11px;color:#065f46;background:none;border:none;padding:0;cursor:pointer;font-weight:700">Accept nomination</button>` : ''}
+  </div>`;
+  }).join('')}` : ''}
 
   <!-- My own insurance quick view -->
   <div class="section-title" style="margin-top:8px">My Insurance (SGFinDex)</div>
@@ -262,6 +270,44 @@ function quickAction(id, label, path, fn) {
     <svg width="20" height="20" fill="none" stroke="#E02020" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="${path}"/></svg>
     <span style="font-size:10px;color:#374151;font-weight:500">${label}</span>
   </button>`;
+}
+
+function renderActivationLink(opgId, principalNric) {
+  const rec = (S.opg?.asDonee || []).find(r => (opgId && r.id === opgId) || r.donorNric === principalNric);
+  if (!rec) return '';
+  return `<button onclick="showLpaActivationDetails('${rec.id}')" style="margin-top:10px;font-size:11px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`;
+}
+
+function lifecycleMeta(status) {
+  if (status === 'active') {
+    return { label: 'Activated', badgeClass: 'badge-active', borderColor: '#34d399', iconBg: '#d1fae5', iconColor: '#065f46' };
+  }
+  if (status === 'nominated') {
+    return { label: 'Nominated', badgeClass: 'badge-registered', borderColor: '#f59e0b', iconBg: '#fef3c7', iconColor: '#92400e' };
+  }
+  if (status === 'revoked') {
+    return { label: 'Revoked', badgeClass: 'badge-pending', borderColor: '#ef4444', iconBg: '#fee2e2', iconColor: '#991b1b' };
+  }
+  return { label: 'Pending Acceptance', badgeClass: 'badge-pending', borderColor: '#9ca3af', iconBg: '#e5e7eb', iconColor: '#4b5563' };
+}
+
+function lifecycleFootnote(status) {
+  if (status === 'pending_acceptance') return 'Delegated authority nomination not yet accepted';
+  if (status === 'active') return 'Delegated authority activated';
+  if (status === 'nominated') return 'Delegated authority nomination accepted';
+  if (status === 'revoked') return 'Delegated authority access revoked';
+  return 'Delegated authority status';
+}
+
+function showStatusTooltip(status) {
+  const meta = lifecycleMeta(status);
+  const explanation = lifecycleFootnote(status);
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">Status</div>
+    <div style="display:inline-block" class="${meta.badgeClass}">${meta.label}</div>
+    <div style="margin-top:10px;font-size:13px;color:#374151;line-height:1.45">${explanation}</div>
+    <button onclick="closeModal()" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;font-size:13px;font-weight:600;cursor:pointer;margin-top:14px">Close</button>`;
+  document.getElementById('modal').style.display = 'flex';
 }
 
 async function loadOwnInsurance() {
@@ -408,32 +454,12 @@ function renderScan() {
         </div>
       </div>
     </div>
-    <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:8px">Point your camera at a QR code, or tap a service below</p>
+    <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:8px">Point your camera at a QR code and continue.</p>
   </div>
 
-  <!-- Available services -->
-  <div class="section-title">Available Services</div>
   <div style="padding:0 16px 24px">
-    ${spCard('cpf','CPF Online Services','#005B94',isSelf,'MediSave balance only','All CPF balances, contributions, income')}
-    ${spCard('insurer','Insurance Portal','#6B21A8',isSelf,'Active policies · sum insured · premiums','Full policy details via SGFinDex')}
-  </div>`;
-}
-
-function spCard(spId, name, color, isSelf, delegatedLabel, ownLabel) {
-  const disabled = !isSelf && !S.me.delegatedAuthorities?.length;
-  return `
-  <div style="background:white;border:1px solid #f0f0f0;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-      <div style="width:40px;height:40px;background:${color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0v8a1 1 0 001 1h8a1 1 0 001-1V8a1 1 0 00-1-1H6a1 1 0 00-1 1zm8-4H6v4h8V4z"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${name}</div>
-        <div style="font-size:10px;color:#9ca3af;margin-top:1px">${isSelf?ownLabel:delegatedLabel}</div>
-      </div>
-    </div>
-    <button onclick="simulateScan('${spId}')" ${disabled?'disabled':''} style="width:100%;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:${disabled?'not-allowed':'pointer'};background:${disabled?'#f9fafb':color};color:${disabled?'#9ca3af':'white'};transition:opacity 0.15s">
-      ${disabled ? 'No active delegation' : '↓ Tap to scan / login'}
+    <button onclick="showScanServicePicker()" style="width:100%;padding:12px;border-radius:12px;border:none;background:#E02020;color:white;font-size:14px;font-weight:700;cursor:pointer">
+      Continue after scan
     </button>
   </div>`;
 }
@@ -446,6 +472,24 @@ function setScanProfile(principalNric) {
   if (principalNric === 'none') return;
   S.scanProfile = principalNric;
   renderTab('scan');
+}
+
+function showScanServicePicker() {
+  const isSelf = S.scanProfile === 'self';
+  const me = S.me;
+  const d = !isSelf ? me.delegatedAuthorities.find(a=>a.principalNric===S.scanProfile) : null;
+  if (!isSelf && !d) {
+    alert('No active delegated authority for this profile yet. Activate LPA first.');
+    return;
+  }
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:14px">QR detected</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:10px">Selected profile: ${isSelf ? `Principal · ${me.name}` : `Delegated Authority · ${d.principalName}`}</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Select relying party for this demo:</div>
+    <button onclick="simulateScan('cpf')" style="width:100%;padding:11px;border:none;border-radius:10px;background:#005B94;color:white;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px">CPF Online Services</button>
+    <button onclick="simulateScan('insurer')" style="width:100%;padding:11px;border:none;border-radius:10px;background:#6B21A8;color:white;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">Insurance Portal</button>
+    <button onclick="closeModal()" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>`;
+  document.getElementById('modal').style.display = 'flex';
 }
 
 async function simulateScan(spId) {
@@ -520,6 +564,8 @@ function renderInbox() {
     delegated_access: { icon:'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', bg:'#eff6ff', color:'#1d4ed8', label:'Delegated Access' },
     lpa_activated:    { icon:'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bg:'#f0fdf4', color:'#15803d', label:'LPA Activated' },
     lpa_registered:   { icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', bg:'#fffbeb', color:'#92400e', label:'LPA Registered' },
+    lpa_accepted:     { icon:'M5 13l4 4L19 7', bg:'#eef2ff', color:'#4338ca', label:'LPA Accepted' },
+    lpa_revoked:      { icon:'M6 18L18 6M6 6l12 12', bg:'#fef2f2', color:'#b91c1c', label:'LPA Revoked' },
   };
 
   const myNric = S.me.nric;
@@ -541,6 +587,14 @@ function renderInbox() {
     } else if (e.type === 'lpa_registered') {
       if (isActor)     message = `You registered an LPA with the Office of the Public Guardian`;
       else message = `<strong>${e.principalName}</strong> registered you as a delegate with the OPG`;
+    } else if (e.type === 'lpa_accepted') {
+      if (isActor) message = `You accepted delegated authority for <strong>${e.principalName}</strong>`;
+      else if (isPrincipal) message = `<strong>${e.actorName}</strong> accepted your delegated authority nomination`;
+      else message = `<strong>${e.actorName}</strong> accepted delegated authority nomination`;
+    } else if (e.type === 'lpa_revoked') {
+      if (isActor) message = `You withdrew a delegated authority nomination`;
+      else if (isPrincipal) message = `A delegated authority nomination under your account was revoked`;
+      else message = `Your delegated authority nomination was revoked`;
     }
 
     return `
@@ -553,7 +607,7 @@ function renderInbox() {
           <div style="font-size:10px;font-weight:700;color:${cfg.color};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${cfg.label}</div>
           <div style="font-size:12px;color:#374151;line-height:1.4">${message}</div>
           ${e.scopesAccessed?.length?`<div style="font-size:10px;color:#6b7280;margin-top:4px">Scope: ${e.scopesAccessed.join(', ')}</div>`:''}
-          ${e.certificate?`<div style="font-size:10px;color:#6b7280;margin-top:2px">Dr: ${e.certificate.doctorName} · ${e.certificate.hospital}</div>`:''}
+          ${e.certificate?`<div style="font-size:10px;color:#6b7280;margin-top:2px">Dr: ${e.certificate.doctorName} · ${e.certificate.hospital}</div><button onclick="showCertificateDetailsFromEncoded('${encodeURIComponent(JSON.stringify(e.certificate))}')" style="margin-top:6px;font-size:10px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`:''}
           <div style="font-size:10px;color:#9ca3af;margin-top:4px">${fmtDate(e.timestamp)}</div>
         </div>
       </div>
@@ -567,8 +621,6 @@ function renderMe() {
   const me = S.me;
   const asDonor = S.opg.asDonor || [];
   const asDonee = S.opg.asDonee || [];
-
-  const statusMap = { registered: 'Registered – awaiting activation', active: 'Active', revoked: 'Revoked', pending: 'Pending OPG processing' };
 
   return `
   <div style="padding:20px 20px 8px">
@@ -595,10 +647,15 @@ function renderMe() {
         <div style="font-size:10px;color:#9ca3af;margin-top:2px">Registered ${new Date(r.registeredAt).toLocaleDateString('en-SG')}</div>
       </div>
       <div style="text-align:right">
-        <div class="${r.status==='active'?'badge-active':r.status==='registered'?'badge-registered':'badge-pending'}">${r.status.toUpperCase()}</div>
-        ${r.status==='registered'?`<div style="font-size:9px;color:#92400e;margin-top:4px;max-width:100px;text-align:right">Awaiting doctor certificate</div>`:''}
+        <div class="${lifecycleMeta(r.status).badgeClass}">${lifecycleMeta(r.status).label}</div>
+        ${r.status==='nominated'?`<div style="font-size:9px;color:#92400e;margin-top:4px;max-width:100px;text-align:right">Awaiting doctor certificate</div>`:''}
+        ${r.status==='pending_acceptance'?`<div style="font-size:9px;color:#6b7280;margin-top:4px;max-width:120px;text-align:right">Awaiting delegate acceptance</div>`:''}
         ${r.certificate?`<div style="font-size:9px;color:#15803d;margin-top:4px;max-width:100px;text-align:right">Certified by ${r.certificate.doctorName}</div>`:''}
       </div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:10px">
+      ${r.certificate?`<button onclick="showCertificateDetailsFromEncoded('${encodeURIComponent(JSON.stringify(r.certificate))}')" style="font-size:11px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`:''}
+      ${r.status!=='revoked'?`<button onclick="revokeNomination('${r.id}','${encodeURIComponent(r.doneeName)}')" style="font-size:11px;color:#dc2626;background:none;border:none;padding:0;cursor:pointer;font-weight:600">Withdraw nomination</button>`:''}
     </div>
   </div>`).join('') : '<div style="padding:0 16px 12px;font-size:12px;color:#9ca3af">No LPA registered. Nominate a delegate below.</div>'}
 
@@ -613,8 +670,9 @@ function renderMe() {
         <div style="font-size:14px;font-weight:600">${r.donorName}</div>
         <div style="font-size:11px;color:#6b7280">${r.relationship}</div>
       </div>
-      <div class="${r.status==='active'?'badge-active':'badge-registered'}">${r.status.toUpperCase()}</div>
+      <div class="${lifecycleMeta(r.status).badgeClass}">${lifecycleMeta(r.status).label}</div>
     </div>
+    ${r.certificate?`<button onclick="showCertificateDetailsFromEncoded('${encodeURIComponent(JSON.stringify(r.certificate))}')" style="margin-top:8px;font-size:11px;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer;font-weight:600">View activation details</button>`:''}
   </div>`).join('')}` : ''}
 
   <!-- Nominate form -->
@@ -654,18 +712,105 @@ async function nominateDelegate() {
     msg.textContent = `LPA registered with OPG for ${data.registration.doneeName||nric}. It will activate when a doctor certifies incapacity.`;
     document.getElementById('nominate-nric').value = '';
     // Refresh OPG data
-    const opgRes = await fetch('/api/opg/registry');
-    S.opg = await opgRes.json();
+    await refreshMeAndOpg();
+    renderTab('me');
   } else {
     msg.style.color = '#dc2626';
     msg.textContent = data.error || 'Something went wrong.';
   }
 }
 
+async function revokeNomination(lpaId, doneeNameEncoded) {
+  const doneeName = decodeURIComponent(doneeNameEncoded);
+  if (!confirm(`Withdraw nomination for ${doneeName}? This will revoke delegated authority.`)) return;
+  const res = await fetch(`/api/opg/nomination/${lpaId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Unable to revoke LPA.');
+    return;
+  }
+  await refreshMeAndOpg();
+  renderTab('me');
+}
+
+async function acceptNomination(lpaId) {
+  const res = await fetch(`/api/opg/nomination/${lpaId}/accept`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Unable to accept nomination.');
+    return;
+  }
+  await refreshMeAndOpg();
+  renderTab('home');
+}
+
+async function refreshMeAndOpg() {
+  const [meRes, opgRes] = await Promise.all([fetch('/api/me'), fetch('/api/opg/registry')]);
+  S.me = await meRes.json();
+  S.opg = await opgRes.json();
+}
+
+function showCertificateDetails(certificate) {
+  const c = typeof certificate === 'string' ? JSON.parse(certificate) : certificate;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:14px">Incapacity certification</div>
+    <div style="background:#f9fafb;border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:#6b7280">Doctor</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.doctorName || 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Hospital</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.hospital || 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Certified at</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.certifiedAt ? fmtDate(c.certifiedAt) : 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Clinical note (integrated payload)</div>
+      <div style="font-size:12px;color:#374151;line-height:1.45;margin-top:4px">${c.diagnosis || 'No diagnosis note received.'}</div>
+    </div>
+    <button onclick="closeModal()" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Close</button>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function showCertificateDetailsFromEncoded(encoded) {
+  showCertificateDetails(JSON.parse(decodeURIComponent(encoded)));
+}
+
+function showLpaActivationDetails(lpaId) {
+  const all = [...(S.opg?.asDonee || []), ...(S.opg?.asDonor || [])];
+  const rec = all.find(r => r.id === lpaId);
+  if (!rec) {
+    alert('Activation details not found.');
+    return;
+  }
+  const c = rec.certificate;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:14px">LPA activation details</div>
+    <div style="background:#f9fafb;border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:#6b7280">Principal</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${rec.donorName}</div>
+      <div style="font-size:11px;color:#6b7280">Delegate</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${rec.doneeName}</div>
+      <div style="font-size:11px;color:#6b7280">Status</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${lifecycleMeta(rec.status).label}</div>
+      <div style="font-size:11px;color:#6b7280">Trigger condition</div>
+      <div style="font-size:12px;color:#374151;margin-bottom:8px">${(rec.triggerCondition || 'incapacity_certified_by_doctor').replaceAll('_', ' ')}</div>
+      ${c ? `
+      <div style="font-size:11px;color:#6b7280">Doctor</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.doctorName || 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Hospital</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.hospital || 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Certified at</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${c.certifiedAt ? fmtDate(c.certifiedAt) : 'N/A'}</div>
+      <div style="font-size:11px;color:#6b7280">Clinical note</div>
+      <div style="font-size:12px;color:#374151;line-height:1.45;margin-top:4px">${c.diagnosis || 'No diagnosis note received.'}</div>
+      ` : `<div style="font-size:12px;color:#92400e;line-height:1.45">Pending doctor-certified incapacity. Use hospital integration to activate this LPA.</div>`}
+    </div>
+    <button onclick="closeModal()" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Close</button>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+
 // ─── Profile switcher ────────────────────────────────────────────────────────
 function showProfileSwitcher() {
   const me        = S.me;
   const delegates = me.delegatedAuthorities || [];
+  const pendingDelegates = (me.delegatedAuthorityTiles || []).filter(d => d.lifecycleStatus !== 'active');
 
   document.getElementById('modal-content').innerHTML = `
     <div style="font-size:16px;font-weight:700;margin-bottom:16px;padding:0 4px">Switch Profile</div>
@@ -687,7 +832,16 @@ function showProfileSwitcher() {
       </div>
       ${S.activeProfile===d.principalNric?'<svg style="margin-left:auto" width="18" height="18" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>':''}
     </button>`).join('')}
-    ${!delegates.length?'<div style="padding:8px 0;font-size:12px;color:#9ca3af;text-align:center">No delegated authorities — nominate someone in the Me tab</div>':''}`;
+    ${pendingDelegates.map(d=>`
+    <div style="width:100%;background:#f9fafb;border:1px dashed #d1d5db;border-radius:14px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;opacity:0.9">
+      <div style="width:40px;height:40px;background:#9ca3af;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0">${initials(d.principalName)}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:#374151">${d.principalName}</div>
+        <div style="font-size:11px;color:#6b7280">${lifecycleMeta(d.lifecycleStatus).label} · ${d.relationship}</div>
+      </div>
+      <div class="${lifecycleMeta(d.lifecycleStatus).badgeClass}">${lifecycleMeta(d.lifecycleStatus).label}</div>
+    </div>`).join('')}
+    ${(!delegates.length && !pendingDelegates.length)?'<div style="padding:8px 0;font-size:12px;color:#9ca3af;text-align:center">No delegated authorities — nominate someone in the Me tab</div>':''}`;
   document.getElementById('modal').style.display = 'flex';
 }
 
@@ -712,9 +866,6 @@ init().then(() => {
     setTimeout(loadOwnInsurance, 100);
   }
 });
-
-// Re-load insurance after re-renders
-const origRenderTab = renderTab;
 </script>
 </body>
 </html>

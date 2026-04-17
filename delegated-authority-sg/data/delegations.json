@@ -10,7 +10,13 @@
     "grantedAt": "2025-09-12T08:00:00Z",
     "status": "pending",
     "opgId": "lpa-001",
-    "scope": ["cpf", "employment", "housing", "insurance", "sgfindex"]
+    "scope": [
+      "cpf",
+      "employment",
+      "housing",
+      "insurance",
+      "sgfindex"
+    ]
   },
   {
     "id": "d2",
@@ -23,6 +29,31 @@
     "grantedAt": "2025-10-08T09:30:00Z",
     "status": "active",
     "opgId": "lpa-002",
-    "scope": ["cpf", "employment", "housing", "insurance", "sgfindex"]
+    "scope": [
+      "cpf",
+      "employment",
+      "housing",
+      "insurance",
+      "sgfindex"
+    ]
+  },
+  {
+    "id": "d1776414274652",
+    "principalNric": "S9812353I",
+    "principalName": "LIM BOON HUAT",
+    "delegateNric": "S9912023X",
+    "delegateName": "S9912023X",
+    "relationship": "Child",
+    "basis": "Lasting Power of Attorney",
+    "grantedAt": "2026-04-17T08:24:34.652Z",
+    "status": "revoked",
+    "opgId": "lpa-1776414274652",
+    "scope": [
+      "cpf",
+      "employment",
+      "housing",
+      "insurance",
+      "sgfindex"
+    ]
   }
 ]

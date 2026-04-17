@@ -31,5 +31,21 @@
       "certifiedAt": "2026-02-14T14:22:00Z",
       "diagnosis": "Early onset dementia — assessed unable to make property and financial affairs decisions"
     }
+  },
+  {
+    "id": "lpa-1776414274652",
+    "donorNric": "S9812353I",
+    "donorName": "LIM BOON HUAT",
+    "doneeNric": "S9912023X",
+    "doneeName": "S9912023X",
+    "relationship": "Child",
+    "scope": "property_and_affairs",
+    "registeredAt": "2026-04-17T08:24:34.652Z",
+    "activatedAt": null,
+    "status": "revoked",
+    "triggerCondition": "incapacity_certified_by_doctor",
+    "certificate": null,
+    "revokedAt": "2026-04-17T08:29:28.229Z",
+    "revokedBy": "S9812353I"
   }
 ]

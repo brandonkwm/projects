@@ -4,6 +4,7 @@ const session = require('express-session');
 const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
+const { importJWK, SignJWT } = require('jose');
 
 const app = express();
 const PORT           = process.env.PORT             || 3000;
@@ -12,6 +13,9 @@ const CLIENT_ID      = process.env.OIDC_CLIENT_ID    || 'delegated-authority-dem
 const CLIENT_SECRET  = process.env.OIDC_CLIENT_SECRET || 'not-a-real-secret';
 const REDIRECT_URI   = process.env.OIDC_REDIRECT_URI  || 'http://localhost:3000/auth/callback';
 const SESSION_SECRET = process.env.SESSION_SECRET     || 'dev-only-change-in-prod';
+const OIDC_V2_RP_SECRET_PATH =
+  process.env.OIDC_V2_RP_SECRET_PATH ||
+  path.join(__dirname, 'node_modules', '@opengovsg', 'mockpass', 'static', 'certs', 'oidc-v2-rp-secret.json');
 
 // ─── Data layer ───────────────────────────────────────────────────────────────
 const paths = {
@@ -29,6 +33,16 @@ let auditLog      = JSON.parse(fs.readFileSync(paths.auditLog,       'utf8'));
 const servicePros = JSON.parse(fs.readFileSync(paths.serviceProviders,'utf8'));
 
 const save = (key, data) => fs.writeFileSync(paths[key], JSON.stringify(data, null, 2));
+
+// Backward compatibility for older seed values.
+opgRegistry = opgRegistry.map(r => ({
+  ...r,
+  status: r.status === 'registered' ? 'pending_acceptance' : r.status,
+}));
+delegations = delegations.map(d => ({
+  ...d,
+  status: d.status === 'pending' ? 'pending_acceptance' : d.status,
+}));
 
 // ─── In-memory SP session store ───────────────────────────────────────────────
 const spSessions = {};
@@ -55,6 +69,31 @@ const makeChallenge = v  => crypto.createHash('sha256').update(v).digest('base64
 const nricFromSub   = sub => ((sub || '').match(/s=([^,]+)/i) || [])[1]?.toUpperCase();
 const maskNric      = n   => n[0] + 'XXXX' + n.slice(-4);
 
+let rpSigningJwk = null;
+async function buildV2ClientAssertion() {
+  if (!rpSigningJwk) {
+    const keyset = JSON.parse(fs.readFileSync(OIDC_V2_RP_SECRET_PATH, 'utf8'));
+    rpSigningJwk = keyset.keys.find(k => k.use === 'sig') || keyset.keys[0];
+    if (!rpSigningJwk) throw new Error('No signing JWK found for MockPass v2 token exchange');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const key = await importJWK(rpSigningJwk, rpSigningJwk.alg || 'ES512');
+  return new SignJWT({})
+    .setProtectedHeader({
+      alg: rpSigningJwk.alg || 'ES512',
+      kid: rpSigningJwk.kid,
+      typ: 'JWT',
+    })
+    .setIssuer(CLIENT_ID)
+    .setSubject(CLIENT_ID)
+    .setAudience(`${MOCKPASS_BASE}/singpass/v2`)
+    .setIssuedAt(now)
+    .setExpirationTime(now + 300)
+    .setJti(crypto.randomBytes(16).toString('hex'))
+    .sign(key);
+}
+
 // ─── Auth routes ──────────────────────────────────────────────────────────────
 app.get('/auth/login', (req, res) => {
   const verifier  = makeVerifier();
@@ -66,11 +105,11 @@ app.get('/auth/login', (req, res) => {
 
   const params = new URLSearchParams({
     response_type: 'code', client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI, scope: 'openid',
+    redirect_uri: REDIRECT_URI, scope: 'openid uinfin',
     nonce, state,
     code_challenge: challenge, code_challenge_method: 'S256',
   });
-  res.redirect(`${MOCKPASS_BASE}/singpass/v2/authorize?${params}`);
+  res.redirect(`${MOCKPASS_BASE}/singpass/v2/auth?${params}`);
 });
 
 app.get('/auth/callback', async (req, res) => {
@@ -81,13 +120,16 @@ app.get('/auth/callback', async (req, res) => {
   if (state !== pkce.state) return res.redirect('/?error=invalid_state');
 
   try {
+    const clientAssertion = await buildV2ClientAssertion();
     const tokenRes = await fetch(`${MOCKPASS_BASE}/singpass/v2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code', code,
         redirect_uri: REDIRECT_URI, client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET, code_verifier: pkce.verifier,
+        code_verifier: pkce.verifier,
+        client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        client_assertion: clientAssertion,
       }),
     });
 
@@ -137,7 +179,25 @@ app.get('/api/me', requireAuth, (req, res) => {
     scope: d.scope, opgId: d.opgId,
   }));
 
-  res.json({ nric, name: persona.name, age: persona.age, grantedDelegations, delegatedAuthorities });
+  const delegatedAuthorityTiles = delegations.filter(
+    d => d.delegateNric === nric
+  ).map(d => {
+    const reg = d.opgId ? opgRegistry.find(r => r.id === d.opgId) : null;
+    const lifecycleStatus = reg?.status || d.status || 'pending_acceptance';
+    return {
+      id: d.id, principalNric: d.principalNric, principalName: d.principalName,
+      relationship: d.relationship, basis: d.basis, grantedAt: d.grantedAt,
+      scope: d.scope, opgId: d.opgId,
+      lifecycleStatus,
+      triggerCondition: reg?.triggerCondition || 'incapacity_certified_by_doctor',
+      canAccept: lifecycleStatus === 'pending_acceptance' && reg?.doneeNric === nric,
+    };
+  });
+
+  res.json({
+    nric, name: persona.name, age: persona.age,
+    grantedDelegations, delegatedAuthorities, delegatedAuthorityTiles,
+  });
 });
 
 // ─── API: SGFinDex insurance data ─────────────────────────────────────────────
@@ -255,6 +315,14 @@ app.post('/api/opg/nominate', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid NRIC' });
   if (normalized === nric)
     return res.status(400).json({ error: 'Cannot nominate yourself' });
+  const existingActiveOrRegistered = opgRegistry.find(
+    r => r.donorNric === nric && r.status !== 'revoked'
+  );
+  if (existingActiveOrRegistered) {
+    return res.status(400).json({
+      error: 'Each principal can only have one nominee. Withdraw the current nomination first.',
+    });
+  }
 
   const donorPersona = personas[nric] || {};
   const doneePersona = personas[normalized] || {};
@@ -266,7 +334,7 @@ app.post('/api/opg/nominate', requireAuth, (req, res) => {
     relationship: relationship || 'Family member',
     scope: 'property_and_affairs',
     registeredAt: new Date().toISOString(),
-    activatedAt: null, status: 'registered',
+    activatedAt: null, acceptedAt: null, status: 'pending_acceptance',
     triggerCondition: 'incapacity_certified_by_doctor',
     certificate: null,
   };
@@ -283,7 +351,7 @@ app.post('/api/opg/nominate', requireAuth, (req, res) => {
     principalNric: nric, principalName: donorPersona.name || nric,
     delegateNric: normalized, delegateName: doneePersona.name || normalized,
     relationship: reg.relationship, basis: 'Lasting Power of Attorney',
-    grantedAt: reg.registeredAt, status: 'pending',
+    grantedAt: reg.registeredAt, status: 'pending_acceptance',
     opgId: reg.id,
     scope: ['cpf', 'employment', 'housing', 'insurance', 'sgfindex'],
   };
@@ -303,12 +371,70 @@ app.post('/api/opg/nominate', requireAuth, (req, res) => {
   res.json({ success: true, registration: reg });
 });
 
+app.post('/api/opg/nomination/:id/accept', requireAuth, (req, res) => {
+  const { nric } = req.session;
+  const reg = opgRegistry.find(r => r.id === req.params.id);
+  if (!reg) return res.status(404).json({ error: 'LPA nomination not found' });
+  if (reg.doneeNric !== nric) return res.status(403).json({ error: 'Only nominated delegate can accept' });
+  if (reg.status === 'revoked') return res.status(400).json({ error: 'Cannot accept a revoked nomination' });
+  if (reg.status !== 'pending_acceptance') return res.status(400).json({ error: 'Nomination is not pending acceptance' });
+
+  reg.status = 'nominated';
+  reg.acceptedAt = new Date().toISOString();
+
+  const del = delegations.find(d => d.opgId === reg.id);
+  if (del) del.status = 'nominated';
+
+  save('opg', opgRegistry);
+  save('delegations', delegations);
+
+  addAuditEntry({
+    type: 'lpa_accepted',
+    actorNric: nric, actorName: personas[nric]?.name || nric,
+    principalNric: reg.donorNric, principalName: reg.donorName,
+    serviceProvider: 'Office of the Public Guardian',
+    basis: 'Delegate accepted nomination',
+    notifyNrics: [reg.donorNric, reg.doneeNric],
+  });
+
+  res.json({ success: true, nomination: reg });
+});
+
+app.delete('/api/opg/nomination/:id', requireAuth, (req, res) => {
+  const { nric } = req.session;
+  const reg = opgRegistry.find(r => r.id === req.params.id && r.donorNric === nric);
+  if (!reg) return res.status(404).json({ error: 'LPA nomination not found' });
+  if (reg.status === 'revoked') return res.status(400).json({ error: 'LPA already revoked' });
+
+  reg.status = 'revoked';
+  reg.revokedAt = new Date().toISOString();
+  reg.revokedBy = nric;
+
+  delegations.forEach(d => {
+    if (d.opgId === reg.id) d.status = 'revoked';
+  });
+
+  save('opg', opgRegistry);
+  save('delegations', delegations);
+
+  addAuditEntry({
+    type: 'lpa_revoked',
+    actorNric: nric, actorName: personas[nric]?.name || nric,
+    principalNric: reg.donorNric, principalName: reg.donorName,
+    serviceProvider: 'Office of the Public Guardian',
+    basis: 'Principal withdrew nomination',
+    notifyNrics: [reg.donorNric, reg.doneeNric],
+  });
+
+  res.json({ success: true, nomination: reg });
+});
+
 // ─── API: hospital trigger (LPA activation) ───────────────────────────────────
 app.post('/api/hospital/certify', (req, res) => {
   const { patientNric, doctorName, hospital, diagnosis } = req.body;
 
   const normalized = (patientNric || '').trim().toUpperCase();
-  const regs = opgRegistry.filter(r => r.donorNric === normalized && r.status === 'registered');
+  const regs = opgRegistry.filter(r => r.donorNric === normalized && r.status === 'nominated');
 
   if (!regs.length) {
     return res.status(404).json({ error: 'No registered LPA found for this patient' });
