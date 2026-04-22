@@ -150,10 +150,6 @@ delegated-authority-sg/
 
 ## Screenshots
 
-### Landing
-
-![CareAuth SG landing page](./screenshots/landing.png)
-
 ### Singpass app profile switch
 
 ![Profile switching between principal and delegated authority](./screenshots/profile-switch.png)
@@ -162,13 +158,9 @@ delegated-authority-sg/
 
 ![Delegated authority scan flow](./screenshots/delegated-scan.png)
 
-### CPF scoped delegated view
+### CPF / insurance scoped delegated view
 
 ![CPF service provider delegated view](./screenshots/cpf-scoped-view.png)
-
-### Insurance scoped delegated view
-
-![Insurance delegated view with restricted fields](./screenshots/insurance-scoped-view.png)
 
 ### Delegate nomination (Me tab)
 
@@ -178,6 +170,10 @@ delegated-authority-sg/
 
 ![Hospital incapacity certification and LPA activation](./screenshots/hospital-activation.png)
 
-### Audit trail
+### Audit trail (delegated authority view)
 
-![Delegated access audit trail](./screenshots/audit-trail.png)
+![Delegated authority audit trail](./screenshots/delegated-authority-view-audit-trail.png)
+
+### Audit trail (principal view)
+
+![Principal audit trail](./screenshots/principal-view-audit-trail.png)
