@@ -40,3 +40,21 @@ This is an MVP of what could be an internal operations platform where there is a
 - Terminal 2: `cd ops-portal-frontend && npm install && npm run dev`
 
 Note: vibe coded using cursor AI
+
+## Screenshots
+
+### Workflows builder
+
+![Ops Portal workflows builder](./screenshots/workflows-builder.png)
+
+### Case templates
+
+![Case templates management](./screenshots/case-templates.png)
+
+### Communication templates
+
+![Communication templates management](./screenshots/communication-templates.png)
+
+### Case work
+
+![Case work queue and case handling](./screenshots/case-work.png)

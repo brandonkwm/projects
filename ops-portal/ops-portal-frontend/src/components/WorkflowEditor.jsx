@@ -301,6 +301,8 @@ function WorkflowCanvas({
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [workflowName, setWorkflowName] = useState(initialWorkflow?.name ?? '');
   const [workflowDescription, setWorkflowDescription] = useState(initialWorkflow?.description ?? '');
+  const [workflowObjective, setWorkflowObjective] = useState(initialWorkflow?.aiProfile?.objective ?? '');
+  const [workflowContext, setWorkflowContext] = useState(initialWorkflow?.aiProfile?.context ?? '');
   const [requestBodyDescription, setRequestBodyDescription] = useState(
     initialWorkflow?.requestBodyDescription ?? ''
   );
@@ -321,6 +323,16 @@ function WorkflowCanvas({
   const workflowId = initialWorkflow?.id ?? null;
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [saveBlockingMessages, setSaveBlockingMessages] = useState([]);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiModel, setAiModel] = useState('claude-haiku');
+  const [aiModels, setAiModels] = useState([
+    { key: 'gemini-flash', label: 'Gemini Flash 2.0 (Free)' },
+    { key: 'claude-haiku', label: 'Claude Haiku 4.5' },
+    { key: 'claude-opus', label: 'Claude Opus 4.7' },
+  ]);
   const { project } = useReactFlow();
   const taskLabelSignatureRef = useRef('');
 
@@ -665,6 +677,10 @@ function WorkflowCanvas({
       id,
       name,
       description: workflowDescription.trim() || undefined,
+      aiProfile: {
+        objective: workflowObjective.trim() || undefined,
+        context: workflowContext.trim() || undefined,
+      },
       requestBodyDescription: requestBodyDescription.trim() || undefined,
       entryConfig,
       definition: {
@@ -689,6 +705,8 @@ function WorkflowCanvas({
     edges,
     workflowName,
     workflowDescription,
+    workflowObjective,
+    workflowContext,
     requestBodyDescription,
     workflowId,
     entryConfig,
@@ -706,6 +724,49 @@ function WorkflowCanvas({
   }, [onSave, buildWorkflowPayload]);
 
   const displayId = workflowId || (workflowName.trim() ? uniqueWorkflowId(slugFromName(workflowName)) : '—');
+
+  const generateFromDescription = useCallback(async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const res = await fetch('http://localhost:3001/api/ai/workflow-from-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: aiPrompt,
+          objective: workflowObjective.trim(),
+          context: workflowContext.trim(),
+          caseTemplates,
+          communicationTemplates,
+          model: aiModel,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.name) setWorkflowName(data.name);
+      if (data.description) setWorkflowDescription(data.description);
+      if (data.definition?.nodes?.length) {
+        setNodes(data.definition.nodes);
+        setEdges(data.definition.edges ?? []);
+        // Advance the id counter so new dragged nodes don't collide
+        const maxN = data.definition.nodes.reduce((m, n) => {
+          const match = String(n.id).match(/^node_(\d+)$/);
+          return match ? Math.max(m, parseInt(match[1])) : m;
+        }, -1);
+        id = maxN + 1;
+      }
+      setAiOpen(false);
+      setAiPrompt('');
+    } catch (err) {
+      setAiError(err.message || 'Generation failed. Please try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiPrompt, workflowObjective, workflowContext, caseTemplates, communicationTemplates, aiModel, setNodes, setEdges]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -771,6 +832,22 @@ function WorkflowCanvas({
         >
           Audit log
         </button>
+        <button
+          type="button"
+          onClick={() => { setAiOpen((o) => !o); setAiError(''); }}
+          style={{
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 600,
+            borderRadius: 8,
+            border: '1px solid #a78bfa',
+            background: aiOpen ? '#ede9fe' : '#f5f3ff',
+            color: '#6d28d9',
+            cursor: 'pointer',
+          }}
+        >
+          ✨ AI Generate
+        </button>
         {onSave && (
           <button
             type="button"
@@ -790,6 +867,133 @@ function WorkflowCanvas({
           </button>
         )}
       </div>
+
+      {aiOpen && (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #ddd6fe',
+            background: '#faf5ff',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#6d28d9' }}>
+              Describe your workflow in plain English
+            </div>
+            <select
+              value={aiModel}
+              onChange={(e) => setAiModel(e.target.value)}
+              style={{
+                fontSize: 11,
+                padding: '4px 8px',
+                borderRadius: 6,
+                border: '1px solid #c4b5fd',
+                background: '#ffffff',
+                color: '#6d28d9',
+                cursor: 'pointer',
+              }}
+            >
+              {aiModels.map((m) => (
+                <option key={m.key} value={m.key}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ fontSize: 11, color: '#7c3aed' }}>
+            e.g. "When a payment exceeds $10k, check compliance rules, if approved notify the customer, otherwise create a review case for the ops team"
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#6d28d9', marginTop: 4 }}>Agentic AI intent</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>
+            These are stored with the workflow and used by AI steps when processing incoming cases.
+          </div>
+          <label style={{ fontSize: 11, fontWeight: 500, color: '#4c1d95' }}>Objective (purpose of workflow)</label>
+          <textarea
+            rows={2}
+            value={workflowObjective}
+            onChange={(e) => setWorkflowObjective(e.target.value)}
+            placeholder="e.g. Approve low-risk payments quickly while maintaining compliance checks."
+            style={{
+              padding: '8px 10px',
+              fontSize: 12,
+              borderRadius: 6,
+              border: '1px solid #c4b5fd',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          <label style={{ fontSize: 11, fontWeight: 500, color: '#4c1d95' }}>Context (why this workflow exists)</label>
+          <textarea
+            rows={2}
+            value={workflowContext}
+            onChange={(e) => setWorkflowContext(e.target.value)}
+            placeholder="e.g. Existing process is manual and causes delays; audit requires explicit decision trace."
+            style={{
+              padding: '8px 10px',
+              fontSize: 12,
+              borderRadius: 6,
+              border: '1px solid #c4b5fd',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          <textarea
+            rows={3}
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="Describe what should happen step by step..."
+            style={{
+              padding: '8px 10px',
+              fontSize: 12,
+              borderRadius: 6,
+              border: '1px solid #c4b5fd',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generateFromDescription();
+            }}
+          />
+          {aiError && (
+            <div style={{ fontSize: 11, color: '#991b1b' }}>{aiError}</div>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={generateFromDescription}
+              disabled={aiLoading || !aiPrompt.trim()}
+              style={{
+                padding: '7px 16px',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 6,
+                border: 'none',
+                background: aiLoading || !aiPrompt.trim() ? '#c4b5fd' : '#7c3aed',
+                color: '#ffffff',
+                cursor: aiLoading || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {aiLoading ? 'Generating...' : 'Generate workflow'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAiOpen(false); setAiError(''); }}
+              style={{
+                padding: '7px 12px',
+                fontSize: 12,
+                borderRadius: 6,
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {saveBlockingMessages.length > 0 && (
         <div

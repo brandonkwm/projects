@@ -29,3 +29,17 @@ Runs at `http://localhost:3001` by default. Set `PORT` to override.
 - `GET /api/health` — health check
 
 Storage is in-memory (resets on restart). Replace the `store/*` modules with DB or file persistence when ready.
+
+## Screenshots
+
+### API health and endpoints
+
+![Backend health and endpoint testing](./screenshots/api-health-endpoints.png)
+
+### Workflow API example
+
+![Workflow API create and list example](./screenshots/workflow-api.png)
+
+### Case API example
+
+![Case API update and complete example](./screenshots/case-api.png)
