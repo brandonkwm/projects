@@ -147,3 +147,37 @@ delegated-authority-sg/
 - Time-limited delegations (auto-expire after N months)
 - Audit log of every delegated access (who viewed what, when)
 - Extend to banking: delegate-view of bank balances via SGFinDex / FI connectors
+
+## Screenshots
+
+### Landing
+
+![CareAuth SG landing page](./screenshots/landing.png)
+
+### Singpass app profile switch
+
+![Profile switching between principal and delegated authority](./screenshots/profile-switch.png)
+
+### Scan with delegated authority
+
+![Delegated authority scan flow](./screenshots/delegated-scan.png)
+
+### CPF scoped delegated view
+
+![CPF service provider delegated view](./screenshots/cpf-scoped-view.png)
+
+### Insurance scoped delegated view
+
+![Insurance delegated view with restricted fields](./screenshots/insurance-scoped-view.png)
+
+### Delegate nomination (Me tab)
+
+![Nominate delegate flow](./screenshots/delegate-nomination.png)
+
+### Hospital certification activation
+
+![Hospital incapacity certification and LPA activation](./screenshots/hospital-activation.png)
+
+### Audit trail
+
+![Delegated access audit trail](./screenshots/audit-trail.png)
