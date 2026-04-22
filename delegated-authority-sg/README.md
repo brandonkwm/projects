@@ -176,4 +176,4 @@ delegated-authority-sg/
 
 ### Audit trail (principal view)
 
-![Principal audit trail](./screenshots/principal-view-audit-trail.png)
+![Principal audit trail](./screenshots/principal-view-audit-trail.png?v=2)
