@@ -35,6 +35,33 @@ This is an MVP of what could be an internal operations platform where there is a
 
 4. Use the app: configure **Workflows**, **Case templates**, and **Communication templates**, then work on cases under **Case work**. Data is stored in the browser (localStorage) unless you wire the frontend to the backend API.
 
+## Agentic AI features
+
+These help workflows stay aligned with business intent and speed up design.
+
+### Workflow objective and context
+
+In the **Workflows** builder, open **AI Generate**. Besides the plain-English workflow description, you can set:
+
+- **Objective** — what this workflow is meant to achieve (business outcome).
+- **Context** — why this workflow exists (constraints, background, audit or SLA pressure).
+
+Those values are saved on the workflow as `aiProfile.objective` and `aiProfile.context` so any AI-assisted steps inside the process can use the same intent when reasoning about incoming cases or payloads.
+
+### Generate workflow from text
+
+With the backend running and API keys configured (see `ops-portal-backend/README.md`), use **AI Generate** to describe a process in natural language. The service returns a structured workflow (nodes and edges) you can refine on the canvas. The model picker supports Gemini Flash and Claude models; generation calls include objective and context when you provide them.
+
+### Optional API: explain / next-best-action shape
+
+The backend exposes `POST /api/ai/explain-why` for structured “objective + runtime context → recommended action + rationale” responses. The main designer UX today centers on **saved objective/context** plus **text-to-workflow** generation; you can wire this endpoint into **Case work** or tooling as a separate step.
+
+## Knowledge miner (planned direction)
+
+A **knowledge miner** would turn closed-case history into reusable insights: recurring failure patterns, effective remediation paths, and automation candidates—with human review before anything is promoted into live workflows.
+
+**Building blocks to aim for:** structured timelines and outcomes on case completion, a small **knowledge** store (patterns + recommendations + audit), a batch or on-close **mining** job, and an **Insights** UI to approve or reject suggestions. Objective and context on each workflow would ground summaries so recommendations match why the workflow exists, not only what failed most often.
+
 **One-liner from repo root (two terminals):**
 - Terminal 1: `cd ops-portal-backend && npm install && npm run dev`
 - Terminal 2: `cd ops-portal-frontend && npm install && npm run dev`
