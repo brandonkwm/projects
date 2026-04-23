@@ -52,10 +52,6 @@ Those values are saved on the workflow as `aiProfile.objective` and `aiProfile.c
 
 With the backend running and API keys configured (see `ops-portal-backend/README.md`), use **AI Generate** to describe a process in natural language. The service returns a structured workflow (nodes and edges) you can refine on the canvas. The model picker supports Gemini Flash and Claude models; generation calls include objective and context when you provide them.
 
-### Optional API: explain / next-best-action shape
-
-The backend exposes `POST /api/ai/explain-why` for structured “objective + runtime context → recommended action + rationale” responses. The main designer UX today centers on **saved objective/context** plus **text-to-workflow** generation; you can wire this endpoint into **Case work** or tooling as a separate step.
-
 ## Knowledge miner (planned direction)
 
 A **knowledge miner** would turn closed-case history into reusable insights: recurring failure patterns, effective remediation paths, and automation candidates—with human review before anything is promoted into live workflows.

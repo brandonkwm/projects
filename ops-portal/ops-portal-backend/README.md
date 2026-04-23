@@ -39,7 +39,6 @@ Endpoints:
 
 - `GET /api/ai/models` — list available model keys for the UI.
 - `POST /api/ai/workflow-from-description` — body includes `description` (required), optional `objective` and `context` (plain text, aligned with workflow `aiProfile`), optional `caseTemplates` and `communicationTemplates`, and `model` (`gemini-flash` | `claude-haiku` | `claude-opus`). Returns workflow JSON (`name`, `description`, `definition`).
-- `POST /api/ai/explain-why` — body includes `objective` and `context` objects (see route implementation for shape); returns a structured recommendation and rationale for integrations such as case triage or copilots.
 
 The frontend workflow editor sends `objective` and `context` from the **Agentic AI intent** fields when generating workflows so the LLM respects the same intent stored on save.
 
