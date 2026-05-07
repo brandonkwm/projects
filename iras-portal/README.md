@@ -49,8 +49,18 @@ This prototype proposes a digital journey to solve that.
 |---|-----------|--------|
 | 1 | **Minimum floor** | Instalment cannot drop below 10% of current monthly (e.g. $50 on a $500 plan) |
 | 2 | **Mandatory supporting document** | Required for all requests regardless of reduction amount |
-| 3 | **Compounding deferral cap** | If a deferred balance from a prior window is still outstanding, further deferral this window is capped at 50% of that outstanding amount — prevents year-on-year debt snowball |
+| 3 | **Compounding deferral cap** | If a deferred balance from a prior window is still outstanding, further deferral this window is capped at 50% of that outstanding amount — prevents year-on-year debt snowball. See example below. |
 | 4 | **Pending request lock** | Cannot submit a new request while a prior one is under review |
+
+### Compounding Deferral Cap — Example
+
+Say you are in **YA 2025** and reduce your payments, deferring **$2,300** to the following year.
+
+In **YA 2026**, you are assessed again and find yourself still struggling. Without a compounding cap, you could defer again in full — and again in YA 2027 — stacking an ever-growing liability that becomes difficult for both the taxpayer and IRAS to manage.
+
+The guardrail applies: **maximum additional deferral in YA 2026 is capped at 50% of the $2,300 already outstanding = $1,150**. So if your YA 2026 remaining balance is $3,000, you must pay at least $3,000 − $1,150 = **$1,850 this window** (≈ $154/month minimum), not just the base $50 floor.
+
+The effective minimum therefore tightens with every window of outstanding debt, ensuring meaningful repayment progress while still offering genuine relief to someone in prolonged hardship. In this prototype the rule is surfaced as a policy statement; a real backend would calculate the cap dynamically from the user's deferred balance history.
 
 ---
 
