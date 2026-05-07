@@ -45,17 +45,12 @@ This prototype proposes a digital journey to solve that.
 
 ## Guardrails (Abuse Prevention)
 
-| # | Guardrail | Implementation |
-|---|-----------|----------------|
-| 1 | **Minimum floor** | Instalment cannot drop below $50/month |
-| 2 | **Max deferral cap** | Cannot defer more than 60% of remaining balance per window |
-| 3 | **Combined effective floor** | Floor of 1 & 2 enforced — whichever is higher |
-| 4 | **Mandatory document for large reductions** | Reductions >50% of current instalment require document upload |
-| 5 | **1 adjustment per window** | UI surfaces this as a policy rule; backend would enforce |
-| 6 | **Minimum months elapsed** | Adjustment only available from month 3 of the cycle |
-| 7 | **Pending request lock** | Cannot submit while a prior request is under review |
-| 8 | **Audit flag** (system-level) | Requests >40% reduction without document flagged for IRAS review |
-| 9 | **Compounding deferral cap** (system-level) | If prior window deferral is outstanding, cap drops to 30% |
+| # | Guardrail | Detail |
+|---|-----------|--------|
+| 1 | **Minimum floor** | Instalment cannot drop below 10% of current monthly (e.g. $50 on a $500 plan) |
+| 2 | **Mandatory supporting document** | Required for all requests regardless of reduction amount |
+| 3 | **Compounding deferral cap** | If a deferred balance from a prior window is still outstanding, further deferral this window is capped at 50% of that outstanding amount — prevents year-on-year debt snowball |
+| 4 | **Pending request lock** | Cannot submit a new request while a prior one is under review |
 
 ---
 
@@ -107,7 +102,7 @@ src/
 - **UI matches IRAS portal conventions** — navy/teal/orange colour palette, header layout, step indicator pattern, breadcrumb navigation, and typography all mirror the live myTax Portal.
 - **Deferral visualisation is the core UX** — proportional bar charts make the financial impact of the decision immediately legible, including the overlap effect on the next assessment window.
 - **Guardrails surface inline** — limits are explained upfront in a summary box and enforced with contextual error messages, not just rejected silently.
-- **Document upload shifts processing time** — the UI explicitly communicates that applications without supporting documents take longer, nudging users toward compliance without making it compulsory for small reductions.
+- **Document upload is mandatory** — required for all requests to ensure accountability, with clear inline messaging explaining why it is needed.
 
 ---
 
