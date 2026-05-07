@@ -48,7 +48,7 @@ This prototype proposes a digital journey to solve that.
 | # | Guardrail | Detail |
 |---|-----------|--------|
 | 1 | **Minimum floor** | Instalment cannot drop below 10% of current monthly (e.g. $50 on a $500 plan) |
-| 2 | **Mandatory supporting document** | Required for all requests regardless of reduction amount |
+| 2 | **Optional supporting document — two-tier processing** | Not mandatory, as hardship doesn't always come with paperwork. With document: 1–3 working days. Without: up to 10 working days, and IRAS may request one before approving. The processing time difference incentivises submission without gatekeeping access. |
 | 3 | **Compounding deferral cap** | If a deferred balance from a prior window is still outstanding, further deferral this window is capped at 50% of that outstanding amount — prevents year-on-year debt snowball. See example below. |
 | 4 | **Pending request lock** | Cannot submit a new request while a prior one is under review |
 
@@ -112,7 +112,7 @@ src/
 - **UI matches IRAS portal conventions** — navy/teal/orange colour palette, header layout, step indicator pattern, breadcrumb navigation, and typography all mirror the live myTax Portal.
 - **Deferral visualisation is the core UX** — proportional bar charts make the financial impact of the decision immediately legible, including the overlap effect on the next assessment window.
 - **Guardrails surface inline** — limits are explained upfront in a summary box and enforced with contextual error messages, not just rejected silently.
-- **Document upload is mandatory** — required for all requests to ensure accountability, with clear inline messaging explaining why it is needed.
+- **Document upload uses outcome-based nudging** — not mandatory, since hardship doesn't always come with paperwork. Instead, the UI shows a two-tier processing callout (1–3 days with doc vs up to 10 days without), letting users make an informed choice rather than hitting a hard gate.
 
 ---
 
